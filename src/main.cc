@@ -1,5 +1,3 @@
-#include "function_thread/main.hh"
-
 #include "Windows.h"
 #include <d3d9.h>
 #include <dwmapi.h>
@@ -14,8 +12,7 @@
 #include "../libs/imgui/imgui_impl_win32.h"
 #include "../libs/imgui/imgui_internal.h"
 
-#include "globals.hh"
-#include "state_manager/state_manager.hh"
+#include "loader/loader.hh"
 
 // https://github.com/ocornut/imgui/tree/master/examples/example_win32_directx9
 // Data
@@ -24,6 +21,10 @@ static LPDIRECT3DDEVICE9 g_pd3dDevice = nullptr;
 static bool g_DeviceLost = false;
 static UINT g_ResizeWidth = 0, g_ResizeHeight = 0;
 static D3DPRESENT_PARAMETERS g_d3dpp = { };
+static char dll_path[ MAX_PATH ] { "no path" };
+static std::string last_message { };
+static ImVec2 WINDOW_SIZE { 600, 400 };
+ImFont* main_font { nullptr };
 
 // Forward declarations of helper functions
 bool CreateDeviceD3D( HWND hWnd );
@@ -37,7 +38,25 @@ LRESULT WINAPI WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 bool done = false;
 
 namespace application {
+    void setup_styles( ) {
+        // god bless https://pthom.github.io/imgui_manual_online/manual/imgui_manual.html
+        ImVec4* colors = ImGui::GetStyle().Colors;
+        colors[ ImGuiCol_Button ] = ImVec4( 74 / 255.f, 80 / 255.f, 127 / 255.f, 1.f );
+        colors[ ImGuiCol_ButtonHovered ] = ImVec4( 116 / 255.f, 125 / 255.f, 195 / 255.f, 1.f );
+        colors[ ImGuiCol_ButtonActive ] = ImVec4( 94 / 255.f, 85 / 255.f, 157 / 255.f, 1.f );
+
+        ImGuiStyle* style = &ImGui::GetStyle( );
+        style->WindowRounding = 5.f;
+        style->FrameRounding = 2.f;
+        style->FramePadding.x = 20.f;
+        style->FramePadding.y = 3.f;
+
+        const ImGuiIO& io = ImGui::GetIO( );
+        main_font = io.Fonts->AddFontFromFileTTF( "../fonts/lexend-regular.ttf", 14 );
+    }
+
     void render( ) {
+        const auto& style = ImGui::GetStyle( );
         const auto& io = ImGui::GetIO( );
 
         ImGuiViewport* viewport = ImGui::GetMainViewport( );
@@ -46,7 +65,7 @@ namespace application {
         draw_list->AddRectFilled( { 0, 0 }, { viewport->Size.x, viewport->Size.y }, bg_color, 5,
                                   ImDrawFlags_RoundCornersAll );
 
-        constexpr ImU32 text_color = IM_COL32( 255, 255, 0, 255 );
+        constexpr ImU32 text_color = IM_COL32( 255, 255, 0, 100 );
 
         const auto fps_fmt{
             std::vformat( "fps: {}", std::make_format_args( std::clamp< int >( io.Framerate, 0.f, 1000.f ) ) )
@@ -64,20 +83,50 @@ namespace application {
         const auto pos_fmt{ std::vformat( "scr={},{}", std::make_format_args( rect.left, rect.top ) ) };
         draw_list->AddText( { 10, 40 }, text_color, pos_fmt.c_str( ) );
 
-        const auto state_fmt = std::format( "state={}", g_state_manager.get_state_name( ) );
-        draw_list->AddText( { 100, 50 }, text_color, state_fmt.c_str( ) );
-
-        g_function_thread.render( *draw_list );
+        // loader inner window
+        auto center = ImVec2( viewport->Size.x * 0.5f, viewport->Size.y * 0.5f );
+        ImGui::SetNextWindowPos( center, ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
+        ImGui::SetNextWindowSize( center );
 
         static bool dragging{ false };
         static bool oob{ false };
         static int diff[ 2 ]{ 0, 0 };
 
         constexpr ImU32 drag_area_color = IM_COL32( 80, 80, 80, 180 );
-        ImVec2 drag_start{ viewport->Size.x - 100, 0 };
-        ImVec2 drag_end = { viewport->Size.x, 20 };
-        draw_list->AddRectFilled( drag_start, drag_end, drag_area_color, 5,
-                                  ImDrawFlags_RoundCornersTopRight | ImDrawFlags_RoundCornersBottomLeft );
+        ImVec2 drag_start{ viewport->Size.x / 2 - center.x / 2, viewport->Size.y / 2 - center.y / 2 };
+        ImVec2 drag_end = { viewport->Size.x / 2 + center.x / 2, viewport->Size.y / 2 - center.y / 2 + 20 };
+
+        ImGui::Begin("loaderissimo", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar );
+        {
+            ImGui::PushFont( main_font );
+
+            ImGui::Dummy( ImVec2( 0, center.y / 2 - 30 ) );
+            // draw_list->AddRectFilled( drag_start, drag_end, drag_area_color, 5, ImDrawFlags_RoundCornersTopRight | ImDrawFlags_RoundCornersBottomLeft );
+
+            const float input_width = ImGui::CalcItemWidth( );
+            ImGui::SetCursorPosX( ( center.x - input_width ) / 2 );
+            ImGui::InputText( "##path_to_dll", dll_path, IM_ARRAYSIZE( dll_path ) );
+
+
+            const float btn_size = ImGui::CalcTextSize( "load" ).x + style.FramePadding.x * 2.0f;
+            ImGui::SetCursorPosX( ( center.x - btn_size ) / 2 );
+            if ( ImGui::Button( "load" ) && strlen( dll_path ) > 20 ) {
+                const bool did_inject = g_loader.inject( dll_path, "hl2.exe" );
+
+                if ( !did_inject )
+                    last_message = g_loader.get_last_err( );
+                else last_message = "injected.";
+            }
+
+            auto text_width = ImGui::CalcTextSize( last_message.data( ) ).x;
+
+            ImGui::SetCursorPosX( ( center.x - text_width ) / 2 );
+            ImGui::Text( "%s", last_message.data( ) );
+
+            ImGui::PopFont( );
+        }
+        ImGui::End( );
+
 
         bool m1 = GetAsyncKeyState( VK_LBUTTON ) != 0;
         if ( rect.left + drag_start.x <= mp.x && mp.x <= drag_end.x + rect.left && rect.top + drag_start.y <= mp.y && mp
@@ -137,13 +186,17 @@ bool EnableBlurBehind( HWND hwnd ) {
     if ( !hUser32 )
         return false;
 
+    // undocumented windows api
+    // very kuhl, did some digging a while ago to achieve window blur
     SetWindowCompositionAttribute = reinterpret_cast< pfnSetWindowCompositionAttribute >( GetProcAddress(
         hUser32, "SetWindowCompositionAttribute" ) );
+
     if ( !SetWindowCompositionAttribute ) {
         FreeLibrary( hUser32 );
         return false;
     }
 
+    // more undocumented stuff
     ACCENT_POLICY accentPolicy = { ACCENT_ENABLE_BLURBEHIND, 2, 0, 0 };
     WINDOWCOMPOSITIONATTRIBDATA data = { 19, &accentPolicy, sizeof( accentPolicy ) }; // 19 is WCA_ACCENT_POLICY
 
@@ -156,7 +209,30 @@ bool EnableBlurBehind( HWND hwnd ) {
 
 
 // Main code
-int main( int, char** ) {
+int main( int argc, char** argv ) {
+    // find -path arg
+    if ( argc >= 2 ) {
+        for ( int i = 0; i < argc; i++ ) {
+            // get path to dll
+            // look for --path param
+            if ( strcmp( argv[ i ], "--path" ) != 0 ) continue;
+
+            // --path is last
+            if ( i + 1 >= argc ) continue;
+
+            char* path = argv[ i + 1 ];
+
+            // check if dir exists
+            const bool file_exists = std::filesystem::exists( path );
+
+            if ( !file_exists )
+                break;
+
+            strcpy_s( dll_path, argv[ i + 1 ] );
+            break;
+        }
+    }
+
     // Create application window
     //ImGui_ImplWin32_EnableDpiAwareness();
     WNDCLASSEXW wc = {
@@ -164,7 +240,12 @@ int main( int, char** ) {
         L"ImGui Example", nullptr
     };
     ::RegisterClassExW( &wc );
-    HWND hwnd = CreateWindowExW( WS_EX_LAYERED, wc.lpszClassName, L"grr window (angyr)", WS_POPUP, 100, 100, 600, 400,
+
+    // get 1st monitor size
+    const auto scr_x = GetSystemMetrics( SM_CXSCREEN );
+    const auto scr_y = GetSystemMetrics( SM_CYSCREEN );
+
+    HWND hwnd = CreateWindowExW( WS_EX_LAYERED, wc.lpszClassName, L"grr window (angyr)", WS_POPUP, scr_x / 2 - WINDOW_SIZE.x / 2, scr_y / 2 - WINDOW_SIZE.y / 2, WINDOW_SIZE.x, WINDOW_SIZE.y,
                                  nullptr, nullptr, wc.hInstance, nullptr );
 
     SetLayeredWindowAttributes( hwnd, 0, 255, LWA_ALPHA );
@@ -205,20 +286,14 @@ int main( int, char** ) {
 
     ImVec4 clear_color = ImVec4( 0.1f, 0.1f, 0.1f, 0.f );
 
-    g_state_manager.set_state( STARTING );
 
     { // wrap in, we want to kill the app before
         // we kill the window
         // thread goes out of scope -> death
-
-        auto function_thread_thread = std::thread( []( ) {
-            g_function_thread.main( );
-        } );
-
-        function_thread_thread.detach( );
+        application::setup_styles( );
 
         // Main loop
-        while ( g_should_run.load( ) ) {
+        while ( true ) {
             // Poll and handle messages (inputs, window resize, etc.)
             // See the WndProc() function below for our to dispatch events to the Win32 backend.
             MSG msg;
@@ -256,7 +331,7 @@ int main( int, char** ) {
             ImGui_ImplWin32_NewFrame( );
             ImGui::NewFrame( );
 
-            ImGui::SetNextWindowBgAlpha( 1.0f );
+            ImGui::SetNextWindowBgAlpha( 1.f );
 
             application::render( );
 
@@ -279,7 +354,7 @@ int main( int, char** ) {
                 g_DeviceLost = true;
 
             if ( GetAsyncKeyState( VK_END ) )
-                g_should_run = false;
+                break;
         }
     }
 
