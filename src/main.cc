@@ -35,7 +35,7 @@ void ResetDevice( );
 
 LRESULT WINAPI WndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 
-bool done = false;
+bool done { false };
 
 namespace application {
     void setup_styles( ) {
@@ -150,7 +150,7 @@ namespace application {
         if ( !m1 && oob )
             oob = false;
 
-        if ( GetAsyncKeyState( VK_END ) )
+        if ( GetAsyncKeyState( VK_F1 ) )
             done = true;
     }
 }
@@ -352,9 +352,6 @@ int main( int argc, char** argv ) {
             HRESULT result = g_pd3dDevice->Present( nullptr, nullptr, nullptr, nullptr );
             if ( result == D3DERR_DEVICELOST )
                 g_DeviceLost = true;
-
-            if ( GetAsyncKeyState( VK_END ) )
-                break;
         }
     }
 
