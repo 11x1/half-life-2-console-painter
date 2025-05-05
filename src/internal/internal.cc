@@ -3,8 +3,10 @@
 #include "internal.hh"
 
 #include "../hooked/chlclient_framestagenotify.hh"
-#include "../hooker/hooker.hh"
+#include "../hooks/hooks.hh"
 #include "../module/module.hh"
+#include "../sdk/steamapi/steamutils.hh"
+#include "../sdk/client_entitylist.hh"
 
 #define CREATE_MODULE( module_name ) { \
     const auto module_handle = GetModuleHandleA( module_name ); \
@@ -12,6 +14,7 @@
     internal::m_modules.emplace( module_name, std::make_unique< module >( module_handle ) ); \
 }
 
+class steamutils;
 using namespace std::chrono_literals;
 using namespace std::string_literals;
 
@@ -41,6 +44,7 @@ void internal::setup::main( HINSTANCE dll_instance ) {
 
     utils::get_vftable( "engine.dll", "CEngineClient" );
 
+    /*
     const auto chlclient = utils::scan_pattern( "engine.dll", "\x8B\x0D\x00\x00\x00\x00\x83\xEC\x00\x85\xC9\x74\x00\x8B\x15", "xx????xx?xxx?xx" );
     const auto chlclient_vftable = utils::get_vftable( "client.dll", "CHLClient" );
 
@@ -50,12 +54,49 @@ void internal::setup::main( HINSTANCE dll_instance ) {
 
     if ( succ )
         chlclient_hook::original = chlclient_vmt_hook->get_original< chlclient_hook::def >( chlclient_hook::index );
+    */
 
+    using create_or_find_interface = int( __cdecl* )( int, const char* );
+    const auto SteamInternal_FindOrCreateUserInterface = utils::get_proc_address< create_or_find_interface >( "steam_api.dll", "SteamInternal_FindOrCreateUserInterface" );
+
+    if ( SteamInternal_FindOrCreateUserInterface ) {
+        printf( "fnaddr: %p\n", SteamInternal_FindOrCreateUserInterface );
+
+        const auto lol = reinterpret_cast< steamutils* >( SteamInternal_FindOrCreateUserInterface( 0, "SteamUtils010" ) );
+
+        printf( "batterypc: %d%%\n", lol->get_current_battery_power(  ) );
+    }
+
+
+    printf( "getting entlist\n" );
+    const auto entitylist = utils::create_interface< client_entitylist >( "client.dll", "VClientEntityList003" );
+    printf( "done.\n" );
+
+    if ( entitylist ) {
+        printf( "found client entitylist\n" );
+
+        const auto highest_entity_index = entitylist->get_highest_entity_index( );
+        printf( "highest entity index: %d\n", highest_entity_index );
+
+        for ( int i = 0; i < highest_entity_index; ++i ) {
+            const auto networked_ent = reinterpret_cast< uintptr_t* >( entitylist->get_client_networkable( i ) );
+            if ( !networked_ent ) continue;
+
+            printf( "entity: %d %p\n", i, networked_ent );
+
+            auto client_class = (*(int (__thiscall **)(uintptr_t *))(*networked_ent + 8))(networked_ent);
+            printf( "m_pNetworkName: %s\n", *(const char **)(client_class + 8) );
+        }
+    } else {
+        printf( "Couldn't find client entitylist\n" );
+    }
+
+    printf( "waiting for end\n" );
 
     while ( !GetAsyncKeyState( VK_END ) )
         std::this_thread::sleep_for( 500ms );
 
-    chlclient_vmt_hook->unhook_all( );
+    // chlclient_vmt_hook->unhook_all( );
 
     printf( "bye\n" );
 
@@ -64,8 +105,11 @@ void internal::setup::main( HINSTANCE dll_instance ) {
 }
 
 void internal::setup::modules( ) {
+    CREATE_MODULE( "steam_api.dll" );
+
     CREATE_MODULE( "engine.dll" );
     CREATE_MODULE( "client.dll" );
+    CREATE_MODULE( "server.dll" );
 }
 
 uintptr_t utils::scan_pattern( const std::string& module_name, const std::string& pattern, const std::string& mask,

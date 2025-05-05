@@ -58,6 +58,10 @@ uintptr_t module::scan_pattern( const byte* pattern, const byte* mask, size_t pa
     return 0;
 }
 
+HMODULE module::get_handle( ) const {
+    return m_handle;
+}
+
 size_t module::get_offset( const uintptr_t from_addr ) {
     return from_addr - reinterpret_cast< uintptr_t >( m_info.lpBaseOfDll );
 }

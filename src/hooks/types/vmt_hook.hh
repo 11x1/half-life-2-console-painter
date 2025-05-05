@@ -103,13 +103,6 @@ public:
             &old_prot
         );
 
-        printf( "unhook: tried to call VirtualProtect(%p, %d, %d, %d)\n",
-                m_vtbl_addr + index * sizeof( void * ),
-                sizeof( void * ),
-                PAGE_EXECUTE_READWRITE,
-                old_prot
-        );
-
         if ( !succ ) {
             printf( "Failed to protect memory: %d\n", GetLastError( ) );
             return false;

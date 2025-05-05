@@ -56,6 +56,8 @@ public:
 
      uintptr_t scan_pattern( const byte* pattern, const byte* mask, size_t pattern_size, size_t offset = 0 ) const;
 
+     [[nodiscard]] HMODULE get_handle( ) const;
+
      size_t get_offset( const uintptr_t from_addr );
 
      [[nodiscard]] std::string get_filename( ) const {
