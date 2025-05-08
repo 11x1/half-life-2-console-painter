@@ -2,6 +2,7 @@
 #define VPANEL_PAINT_TRAVERSE_HH
 
 #include "../features/entity_esp.hh"
+#include "../features/watermark.hh"
 
 namespace vpanel_paint_traverse {
     using def = void( __fastcall* )( int a1, int a2, void* a3, bool a4, bool a5 );
@@ -18,6 +19,7 @@ namespace vpanel_paint_traverse {
         if ( strcmp( name, "CHudViewport" ) == 0 ) {
             interfaces::c_surface->draw_filled_rect( Vector( 100.f, 100.f ), Vector( 100.f, 50.f ) );
             entity_esp::run( );
+            hl2_watermark::run( );
         }
 
         original( a1, a2, a3, a4, a5 );

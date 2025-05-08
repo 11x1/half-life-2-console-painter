@@ -20,6 +20,23 @@ enum SurfaceFeature_e
   DIRECT_HWND_RENDER = 0x7,
 };
 
+enum EFontFlags
+{
+  FONTFLAG_NONE,
+  FONTFLAG_ITALIC			= 0x001,
+  FONTFLAG_UNDERLINE		= 0x002,
+  FONTFLAG_STRIKEOUT		= 0x004,
+  FONTFLAG_SYMBOL			= 0x008,
+  FONTFLAG_ANTIALIAS		= 0x010,
+  FONTFLAG_GAUSSIANBLUR	= 0x020,
+  FONTFLAG_ROTARY			= 0x040,
+  FONTFLAG_DROPSHADOW		= 0x080,
+  FONTFLAG_ADDITIVE		= 0x100,
+  FONTFLAG_OUTLINE		= 0x200,
+  FONTFLAG_CUSTOM			= 0x400,		// custom generated font - never fall back to asian compatibility mode
+  FONTFLAG_BITMAP			= 0x800,		// compiled bitmap font - no fallbacks
+};
+
 struct surface_vtbl
 {
   void *pad0[10];
@@ -41,17 +58,18 @@ struct surface_vtbl
   void *(__thiscall *create_html_window)(surface *, void *, void *);
   void *(__thiscall *paint_html_window)(surface *, void *);
   void *(__thiscall *delete_html_window)(surface *, void *);
-  int (__thiscall *get_texture_id)(surface *, int);
+  int (__thiscall *get_texture_id)(surface *, const char *);
   bool (__thiscall *get_texture_file)(surface *, int, char *, int);
   void (__thiscall *set_texture_file)(surface *, int, const char *, int, bool);
   void (__thiscall *set_texture_rgba)(surface *, int id, const unsigned __int8 *rgba, int w, int h, int filter, bool forcereload);
   void (__thiscall *set_texture)(surface *, int);
   void (__thiscall *get_texture_size)(surface *, int, int *, int *);
   void (__thiscall *draw_textured_rect)(surface *, int, int, int, int);
-  void (__thiscall *is_texture_valid)(surface *, int);
-  void (__thiscall *delete_texture)(surface *, int);
+  bool (__thiscall *is_texture_valid)(surface *, int);
+  bool (__thiscall *delete_texture)(surface *, int);
   int (__thiscall *new_texture_id)(surface *);
-  void *pad98[14];
+  void (__thiscall *get_screen_size)(surface *, int *, int *);
+  void *pad98[13];
   void (__thiscall *set_cursor_always_visible)(surface *, bool);
   bool (__thiscall *is_cursor_visible)(surface *);
   void (__thiscall *apply_changes)(surface *);
@@ -74,7 +92,9 @@ struct surface_vtbl
   int (__thiscall *get_font_ascent)(surface *, int);
   bool (__thiscall *is_font_additive)(surface *, int);
   void (__stdcall *get_char_abc_wide)(size_t, const wchar_t *, int *, int *, int *);
-  void *pad128[48];
+  void *pad128;
+  void (__thiscall *get_text_size)(surface*, HFont, const wchar_t *, int *, int *);
+  void *pad130[46];
   bool (__thiscall *add_bitmap_font_file)(surface *, const char *);
   void (__thiscall *set_bitmap_font_name)(surface *, const char *, const char *);
   void *pad1F0[17];
@@ -86,25 +106,123 @@ class surface {
 private:
   surface_vtbl* m_vftbl;
 public:
-  void draw_filled_rect( const Vector& pos2d, const Vector& sz2d ) {
-    m_vftbl->set_draw_color( this, 255, 255, 255, 255 );
-    m_vftbl->draw_filled_rect( this, pos2d.x, pos2d.y, pos2d.x + sz2d.x, pos2d.y + sz2d.y );
-    // utils::get_vfunc< void (__thiscall *)(surface *, int, int, int, int) >( this, 0x2C / 4 )( this, 255, 255, 255, 255 );
-    //utils::get_vfunc< void (__thiscall *)(surface *, int, int, int, int) >( this, 0x30 / 4 )( this, pos2d.x, pos2d.y, pos2d.x + sz2d.x, pos2d.y + sz2d.y );
+  void set_draw_color( const Color col ) {
+    m_vftbl->set_draw_color_color( this, col );
   }
 
-  void draw_text( std::wstring& text, int px, int py ) {
-    // const auto set_text_pos = utils::get_vfunc< void (__thiscall *)(surface *, int, int) >( this, 0x50 / 4 );
-    // const auto set_text_color = utils::get_vfunc< void (__thiscall *)( surface *, Color ) >( this, 0x48 / 4 );
-    // const auto draw_text = utils::get_vfunc< void (__thiscall *)(surface *, const wchar_t *, int, int) >( this, 0x58 / 4 );
+  void set_draw_color( const int r, const int g, const int b, const int a ) {
+    m_vftbl->set_draw_color( this, r, g, b, a );
+  }
 
-    m_vftbl->set_text_pos( this, px, py );
-    m_vftbl->set_text_color_color( this, Color( 255, 255, 255, 120 ) );
+  void draw_filled_rect( const Vector& pos2d, const Vector& sz2d ) {
+    m_vftbl->draw_filled_rect( this, pos2d.x, pos2d.y, pos2d.x + sz2d.x, pos2d.y + sz2d.y );
+  }
+
+  void draw_outlined_rect( const Vector& pos2d, const Vector& sz2d ) {
+    m_vftbl->draw_outlined_rect( this, pos2d.x, pos2d.y, pos2d.x + sz2d.x, pos2d.y + sz2d.y );
+  }
+
+  void draw_line( const Vector& start, const Vector& end ) {
+    m_vftbl->draw_line( this, start.x, start.y, end.x, end.y );
+  }
+
+  void draw_poly_line( const std::vector< Vector >& points ) {
+    std::vector< int > x, y;
+    for ( const auto& point : points ) {
+      x.push_back( static_cast< int >( point.x ) );
+      y.push_back( static_cast< int >( point.y ) );
+    }
+    m_vftbl->draw_poly_line( this, x.data( ), y.data( ), points.size( ) );
+  }
+
+  void set_render_font( const HFont font ) {
+    m_vftbl->set_render_font( this, font );
+  }
+
+  void set_text_color( const Color col ) {
+    m_vftbl->set_text_color_color( this, col );
+  }
+
+  void set_text_color( const int r, const int g, const int b, const int a ) {
+    m_vftbl->set_text_color( this, r, g, b, a );
+  }
+
+  void set_text_pos( const Vector& pos2d ) {
+    m_vftbl->set_text_pos( this, pos2d.x, pos2d.y );
+  }
+
+  Vector get_text_pos( ) {
+    static int x, y;
+    m_vftbl->get_text_pos( this, &x, &y );
+    return Vector( x, y );
+  }
+
+  void draw_text( const std::wstring& text ) {
     m_vftbl->draw_text( this, text.c_str( ), text.size( ), 0 );
+  }
 
-    // set_text_pos( this, px, py );
-    // set_text_color( this, Color( 255, 255, 255, 120 ) );
-    // draw_text( this, text.c_str( ), text.size( ), 0 );
+  void draw_unicode_char( const wchar_t c ) {
+    m_vftbl->draw_unicode_char( this, c, 0 );
+  }
+
+  void flush_text( ) {
+    m_vftbl->flush_text( this );
+  }
+
+  // no html yet
+
+  int get_texture_id( const std::string& texture_name ) {
+    return m_vftbl->get_texture_id( this, texture_name.c_str( ) );
+  }
+
+  void set_texture_rgba( const int id, const std::vector< byte >& rgba, const int w, const int h, const int filter = 0, const bool forcereload = false ) {
+    m_vftbl->set_texture_rgba( this, id, rgba.data( ), w, h, filter, forcereload );
+  }
+
+  void set_draw_texture( const int id ) {
+    m_vftbl->set_texture( this, id );
+  }
+
+  Vector get_texture_size( const int id ) {
+    static int w, h;
+    m_vftbl->get_texture_size( this, id, &w, &h );
+    return Vector( w, h );
+  }
+
+  void draw_textured_rect( const Vector& pos2d, const Vector& sz2d ) {
+    m_vftbl->draw_textured_rect( this, pos2d.x, pos2d.y, pos2d.x + sz2d.x, pos2d.y + sz2d.y );
+  }
+
+  bool is_texture_valid( const int id ) {
+    return m_vftbl->is_texture_valid( this, id );
+  }
+
+  bool delete_texture( const int id ) {
+    return m_vftbl->delete_texture( this, id );
+  }
+
+  int create_texture( ) {
+    return m_vftbl->new_texture_id( this );
+  }
+
+  HFont create_font( ) {
+    return m_vftbl->create_font( this );
+  }
+
+  void set_font_glyph_set( const HFont font, const std::string& name, const int tall, const int weight, const int blur, const int scanlines, const int flags, const int nmin = 0, const int nmax = 0 ) {
+    m_vftbl->set_font_glyph_set( font, name.c_str( ), tall, weight, blur, scanlines, flags, nmin, nmax );
+  }
+
+  Vector get_text_size( const HFont font, const std::wstring& text ) {
+    static int w, h;
+    m_vftbl->get_text_size( this, font, text.c_str( ), &w, &h );
+    return Vector( w, h );
+  }
+
+  Vector get_screen_size( ) {
+    static int w, h;
+    m_vftbl->get_screen_size( this, &w, &h );
+    return Vector( w, h );
   }
 };
 

@@ -4,6 +4,7 @@
 
 #include "../internal/interfaces.hh"
 #include "../sdk/globals.hh"
+#include "../renderer/surface_wrapper.hh" // 🌯
 
 namespace entity_esp {
     void run( ) {
@@ -41,7 +42,9 @@ namespace entity_esp {
 
             if ( screen_pos.x > 0 && screen_pos.x < 1200 && screen_pos.y > 0 && screen_pos.y < 675 ) {
                 auto ws_netname = std::wstring( netname, netname + strlen( netname ) );
-                interfaces::c_surface->draw_text( ws_netname, screen_pos.x, 675 - screen_pos.y );
+
+                screen_pos.y = 675 - screen_pos.y;
+                surface_wrapper::draw_text( ws_netname, screen_pos, Color( 255, 255, 255, 255 ), fonts::entity_esp );
             }
 
             delete pos;

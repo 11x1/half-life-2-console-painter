@@ -4,10 +4,17 @@
 
 #include "interfaces.hh"
 #include "utils.hh"
+
 #include "../hooked/chlclient_framestagenotify.hh"
 #include "../hooked/vpanel_paint_traverse.hh"
+#include "../hooked/cmatsystem_drawtext.hh"
+
 #include "../hooks/hooks.hh"
+
 #include "../module/module.hh"
+
+#include "../renderer/surface_wrapper.hh"
+
 #include "../sdk/steamapi/steamutils.hh"
 #include "../sdk/client_entitylist.hh"
 
@@ -27,6 +34,7 @@ void internal::setup::main( HINSTANCE dll_instance ) {
 
     internal::setup::modules( );
     interfaces::setup(  );
+    surface_wrapper::setup( );
 
     const auto get_engine_version = utils::scan_pattern( "engine.dll", "A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 55 8B EC 8B 45 ? 33 D2" );
 
@@ -136,12 +144,20 @@ void internal::setup::main( HINSTANCE dll_instance ) {
     if ( succ_vgui )
         vpanel_paint_traverse::original = vgui_panel_wrapper_vmt_hook.get_original< vpanel_paint_traverse::def >( vpanel_paint_traverse::index );
 
+    const auto imatsystem_surface_vftable = utils::get_vftable( "vguimatsurface.dll", "CMatSystemSurface" );
+    auto imatsystem_surface_vmt_hook = hooks::make_vmt_hook( imatsystem_surface_vftable );
+    const bool succ_imatsystem_surface = imatsystem_surface_vmt_hook.hook< cmatsystem_drawtext::def >( cmatsystem_drawtext::index, cmatsystem_drawtext::hook );
+
+    if ( succ_imatsystem_surface )
+        cmatsystem_drawtext::original = imatsystem_surface_vmt_hook.get_original< cmatsystem_drawtext::def >( cmatsystem_drawtext::index );
+
     printf( "waiting for end\n" );
 
     while ( !GetAsyncKeyState( VK_END ) )
         std::this_thread::sleep_for( 500ms );
 
-    hooks::unhook_all( );
+    vgui_panel_wrapper_vmt_hook.unhook( vpanel_paint_traverse::index );
+    imatsystem_surface_vmt_hook.unhook( cmatsystem_drawtext::index );
 
     printf( "bye\n" );
 
