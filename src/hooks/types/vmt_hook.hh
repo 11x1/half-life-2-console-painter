@@ -141,6 +141,10 @@ public:
         return reinterpret_cast< Fn >( m_originals.at( index ) );
     }
 
+    uintptr_t get_original_raw( const size_t index ) const {
+        return m_originals.at( index );
+    }
+
     void unhook_all( ) {
         // omg when removing while iterating map
         // it makes the iterator invalid

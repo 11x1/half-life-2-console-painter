@@ -2,17 +2,14 @@
 
 #include "internal.hh"
 
+#include "interfaces.hh"
+#include "utils.hh"
 #include "../hooked/chlclient_framestagenotify.hh"
+#include "../hooked/vpanel_paint_traverse.hh"
 #include "../hooks/hooks.hh"
 #include "../module/module.hh"
 #include "../sdk/steamapi/steamutils.hh"
 #include "../sdk/client_entitylist.hh"
-
-#define CREATE_MODULE( module_name ) { \
-    const auto module_handle = GetModuleHandleA( module_name ); \
-    assert( module_handle ); \
-    internal::m_modules.emplace( module_name, std::make_unique< module >( module_handle ) ); \
-}
 
 class steamutils;
 using namespace std::chrono_literals;
@@ -29,8 +26,9 @@ void internal::setup::main( HINSTANCE dll_instance ) {
         std::this_thread::sleep_for( 1s );
 
     internal::setup::modules( );
+    interfaces::setup(  );
 
-    const auto get_engine_version = utils::scan_pattern( "engine.dll", "\xA1\x00\x00\x00\x00\xC3\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\xCC\x55\x8B\xEC\x8B\x45\x00\x33\xD2"s,  "x????xxxxxxxxxxxxxxxx?xx"s );
+    const auto get_engine_version = utils::scan_pattern( "engine.dll", "A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 55 8B EC 8B 45 ? 33 D2" );
 
     if ( get_engine_version ) {
         using get_engine_version_t = int( __stdcall* )( );
@@ -44,18 +42,6 @@ void internal::setup::main( HINSTANCE dll_instance ) {
 
     utils::get_vftable( "engine.dll", "CEngineClient" );
 
-    /*
-    const auto chlclient = utils::scan_pattern( "engine.dll", "\x8B\x0D\x00\x00\x00\x00\x83\xEC\x00\x85\xC9\x74\x00\x8B\x15", "xx????xx?xxx?xx" );
-    const auto chlclient_vftable = utils::get_vftable( "client.dll", "CHLClient" );
-
-    const auto chlclient_vmt_hook = hooks::make_vmt_hook( chlclient_vftable );
-
-    const bool succ = chlclient_vmt_hook->hook< chlclient_hook::def >( chlclient_hook::index, chlclient_hook::hook );
-
-    if ( succ )
-        chlclient_hook::original = chlclient_vmt_hook->get_original< chlclient_hook::def >( chlclient_hook::index );
-    */
-
     using create_or_find_interface = int( __cdecl* )( int, const char* );
     const auto SteamInternal_FindOrCreateUserInterface = utils::get_proc_address< create_or_find_interface >( "steam_api.dll", "SteamInternal_FindOrCreateUserInterface" );
 
@@ -68,35 +54,94 @@ void internal::setup::main( HINSTANCE dll_instance ) {
     }
 
 
-    printf( "getting entlist\n" );
-    const auto entitylist = utils::create_interface< client_entitylist >( "client.dll", "VClientEntityList003" );
-    printf( "done.\n" );
-
-    if ( entitylist ) {
+    if ( interfaces::entitylist ) {
         printf( "found client entitylist\n" );
 
-        const auto highest_entity_index = entitylist->get_highest_entity_index( );
+        const auto highest_entity_index = interfaces::entitylist->get_highest_entity_index( );
         printf( "highest entity index: %d\n", highest_entity_index );
 
+        int chl2_player_index { -1 };
+        uintptr_t* chl2_player { nullptr };
+
+        std::map< const char*, size_t > seen_ents { };
+
         for ( int i = 0; i < highest_entity_index; ++i ) {
-            const auto networked_ent = reinterpret_cast< uintptr_t* >( entitylist->get_client_networkable( i ) );
+            const auto networked_ent = reinterpret_cast< uintptr_t* >( interfaces::entitylist->get_client_networkable( i ) );
             if ( !networked_ent ) continue;
 
-            printf( "entity: %d %p\n", i, networked_ent );
-
             auto client_class = (*(int (__thiscall **)(uintptr_t *))(*networked_ent + 8))(networked_ent);
-            printf( "m_pNetworkName: %s\n", *(const char **)(client_class + 8) );
+            const auto netname = *(const char **)(client_class + 8);
+
+            printf( "%s[%p]\n", netname, networked_ent );
+
+            if ( !seen_ents.contains( netname ) )
+                seen_ents[ netname ] = 1;
+            else seen_ents[ netname ]++;
+
+            if ( strcmp( netname, "CHL2_Player" ) == 0 && chl2_player_index == -1 ) {
+                chl2_player = networked_ent;
+                chl2_player_index = i;
+            }
+        }
+
+        printf( "entdump\n\n" );
+        for ( const auto pair : seen_ents ) {
+            printf( "\t%d %s entities\n", pair.second, pair.first );
+        }
+        printf( "\n\n" );
+
+        if ( chl2_player ) {
+            printf( "CHL2_Player addr: %p\n", chl2_player );
+            const auto cliententity = reinterpret_cast< byte* >( interfaces::entitylist->get_client_entity( chl2_player_index ) );
+            printf( "same as IClientEntity: %p\n", cliententity );
+
+            // 28 D0 96 5A
+            // CC D4 96 5A
+            // 84 D5 96 5A
+            // BC D5 96 5A
+            // first 16 bytes are 4 vftables
+            // (found via cheatengine)
+            // dump 'em!
+
+            const auto mod = utils::get_module( "client.dll" );
+
+            for ( int j = 0; j < 4; j++ ) {
+                const auto vftbl = *reinterpret_cast< uintptr_t* >( cliententity + j * 4 );
+                const auto off = mod->get_offset( vftbl );
+                printf( "\tvftbl %d offset= %#x\n", j, off );
+            }
         }
     } else {
         printf( "Couldn't find client entitylist\n" );
     }
+
+
+    /*
+    // const auto chlclient = utils::scan_pattern( "engine.dll", "\x8B\x0D\x00\x00\x00\x00\x83\xEC\x00\x85\xC9\x74\x00\x8B\x15", "xx????xx?xxx?xx" );
+    const auto chlclient_vftable = utils::get_vftable( "client.dll", "CHLClient" );
+
+    auto chlclient_vmt_hook = hooks::make_vmt_hook( chlclient_vftable );
+
+    const bool succ = chlclient_vmt_hook.hook< chlclient_hook::def >( chlclient_hook::index, chlclient_hook::hook );
+
+    if ( succ )
+        chlclient_hook::original = chlclient_vmt_hook.get_original< chlclient_hook::def >( chlclient_hook::index );
+    */
+
+    const auto vgui_panel_wrapper_vftable = utils::get_vftable( "vgui2.dll", "VPanelWrapper" );
+    auto vgui_panel_wrapper_vmt_hook = hooks::make_vmt_hook( vgui_panel_wrapper_vftable );
+
+    const bool succ_vgui = vgui_panel_wrapper_vmt_hook.hook< vpanel_paint_traverse::def >( vpanel_paint_traverse::index, vpanel_paint_traverse::hook );
+
+    if ( succ_vgui )
+        vpanel_paint_traverse::original = vgui_panel_wrapper_vmt_hook.get_original< vpanel_paint_traverse::def >( vpanel_paint_traverse::index );
 
     printf( "waiting for end\n" );
 
     while ( !GetAsyncKeyState( VK_END ) )
         std::this_thread::sleep_for( 500ms );
 
-    // chlclient_vmt_hook->unhook_all( );
+    hooks::unhook_all( );
 
     printf( "bye\n" );
 
@@ -105,117 +150,23 @@ void internal::setup::main( HINSTANCE dll_instance ) {
 }
 
 void internal::setup::modules( ) {
-    CREATE_MODULE( "steam_api.dll" );
-
-    CREATE_MODULE( "engine.dll" );
-    CREATE_MODULE( "client.dll" );
-    CREATE_MODULE( "server.dll" );
-}
-
-uintptr_t utils::scan_pattern( const std::string& module_name, const std::string& pattern, const std::string& mask,
-    size_t offset ) {
-    // expect to have the module defined already
-    assert( m_modules.contains( module_name ) );
-
-    const auto mod = m_modules.at( module_name ).get( );
-    return mod->scan_pattern( pattern, mask, offset );
-}
-
-uintptr_t utils::scan_pattern( const std::string& module_name, const byte* pattern, const byte* mask, size_t pattern_size, size_t offset ) {
-    // expect to have the module defined already
-    assert( m_modules.contains( module_name ) );
-
-    const auto mod = m_modules.at( module_name ).get( );
-    return mod->scan_pattern( pattern, mask, pattern_size, offset );
-}
-
-uintptr_t utils::get_vftable( const std::string& module_name, const std::string& class_name ) {
-    const auto debug_mod = m_modules[ module_name ].get( );
-
-    const std::string rtti_class_name = std::format( ".?AV{}@@", class_name );
-    printf( "rtti_class_name: %s\n", rtti_class_name.c_str( ) );;
-
-    const auto mask = std::string( rtti_class_name.size( ), 'x' );
-    // could only search in .data section, maybe some other day
-    const auto str_addr = utils::scan_pattern( module_name, rtti_class_name, mask );
-
-    if ( !str_addr ) return 0;
-
-    printf( "straddr: %#x\n", debug_mod->get_offset( str_addr ) );
-
-    // type info (32bit) is type descriptor name address
-    // - 8 bytes
-    // open up a type descriptor name in ida
-    // the layout is something similiar
+    // CREATE_MODULE( "steam_api.dll" );
     //
-    // Aa Bb Cc Dd       - type info address
-    // 00 00 00 00       - rtti pad or whatever
-    // 2E 3F 41 56 ...   - type descriptor name
+    // CREATE_MODULE( "engine.dll" );
+    // CREATE_MODULE( "client.dll" );
+    // CREATE_MODULE( "server.dll" );
 
-    // fun fact, the mangled name for type descriptor
-    // addresses is ??_R0?AV{classname}@@@8
+    // go through all modules in app
+    // and add them to the list
+    HMODULE hMods[ 1024 ];
+    HANDLE hProcess = GetCurrentProcess( );
+    DWORD cbNeeded;
 
-    // now this cool type info is addressed by col
-    // and col is referenced by the vftable (basically class method table)
-    // for more info: https://blog.rop.la/en/reversing/2022/12/13/identifying-vftables-through-ms-cpp-rtti.html
-
-    // @ 0xAaBbCcDd
-    const auto type_info_addr = str_addr - 0x8;
-    printf( "type_info_addr: %#x\n", debug_mod->get_offset( type_info_addr ) );
-
-    // cool thing about col (aka Complete Object Locator) is that
-    // it has a recognisable signature (also references type info inside of it as said before)
-    // the col structure is something like this
-    //
-    // 00 00 00 00   - signature
-    // ?? ?? ?? ??   - offset
-    // ?? ?? ?? ??   - offset to base class, if inherited
-    // Dd Cc Bb Aa   - ptr to type info (le)
-    //
-    // since there might be many matching patterns
-    // for the wanted col, we want to prioritise
-    // the lowest offset + inheritance combo
-
-    const byte col_mask[ 16 ] {
-        'x', 'x', 'x', 'x',
-        '?', '?', '?', '?',
-        '?', '?', '?', '?',
-        'x', 'x', 'x', 'x'
-    };
-
-    byte col_pattern[ 16 ] {
-        0, 0, 0, 0,
-        0, 0, 0, 0, // this
-        0, 0, 0, 0, // and this r skipped
-        static_cast<byte>( type_info_addr       & 0xFF ), // Dd (lsb)
-        static_cast<byte>( type_info_addr >>  8 & 0xFF ), // Cc
-        static_cast<byte>( type_info_addr >> 16 & 0xFF ), // Bb
-        static_cast<byte>( type_info_addr >> 24 & 0xFF ), // Aa
-    };
-
-    printf( "colpat:\n12*(0 0 0 0) + %x %x %x %x\n", col_pattern[ 12 ], col_pattern[ 13 ], col_pattern[ 14 ], col_pattern[ 15 ] );
-
-    size_t off { 0 };
-    uintptr_t last_vftbl { 0 };
-    while ( const auto a = utils::scan_pattern( module_name, col_pattern, col_mask, 16, off ) ) {
-        off = m_modules[ module_name ].get( )->get_offset( a ) + 16;
-
-        printf( "Found col pattern match at %#x\n", m_modules[ module_name ].get( )->get_offset( a ) );
-
-        // find a ptr to col addr
-        byte col_ptr_pat[ 4 ]{
-            static_cast<byte>( a       & 0xFF ), // Dd (lsb)
-            static_cast<byte>( a >>  8 & 0xFF ), // Cc
-            static_cast<byte>( a >> 16 & 0xFF ), // Bb
-            static_cast<byte>( a >> 24 & 0xFF ), // Aa
-        };
-
-        byte col_ptr_mask[ 4 ]{ 'x', 'x', 'x', 'x' };
-        const auto not_col = utils::scan_pattern( module_name, col_ptr_pat, col_ptr_mask, 4 );
-
-        printf( "col ref @ %#x (off=%#x) -> vftbl: %#x (off=%#x)\n", not_col, debug_mod->get_offset( not_col ), not_col + 0x4, debug_mod->get_offset( not_col + 0x4 ) );
-        last_vftbl = not_col + 0x4;
-    };
-
-    return last_vftbl;
+    if ( EnumProcessModules( hProcess, hMods, sizeof( hMods ), &cbNeeded ) ) {
+        for ( unsigned int i = 0; i < ( cbNeeded / sizeof( HMODULE ) ); i++ ) {
+            char szModName[ MAX_PATH ];
+            GetModuleBaseNameA( hProcess, hMods[ i ], szModName, sizeof( szModName ) );
+            CREATE_MODULE( std::string( szModName ).c_str( ) );
+        }
+    }
 }

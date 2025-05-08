@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <string>
+#include <vector>
 
 class module {
 private:
@@ -18,7 +19,7 @@ public:
      // only one initializer
      // module "middleware"-s are created setup
      // in function thread
-     explicit module( HMODULE module_handle ) : m_handle( module_handle ) {
+     explicit module( const HMODULE module_handle ) : m_handle( module_handle ) {
           char path_buf[ MAX_PATH ];
 
           // check note if compile errs
@@ -28,7 +29,7 @@ public:
           m_path = std::string( path_buf );
 
           // we can use the same buf to get the filename
-          strcpy( path_buf, strrchr( path_buf, '\\' ) );
+          strcpy_s( path_buf, strrchr( path_buf, '\\' ) );
 
           // expect to find filename
           assert( path_buf );
@@ -36,7 +37,7 @@ public:
           // skip first slash (since srtrrchtrrt returns from last "/...")
           m_filename = std::string( path_buf + 1 );
 
-          printf( "created module \"%s\"\n", m_filename.data( ) );
+          printf( "[%s] created module \"%s\"\n", __FUNCTION__, m_filename.data( ) );
 
           const auto curproc = GetCurrentProcess( );
           assert( curproc );
@@ -48,15 +49,17 @@ public:
      // no deleter because we don't need one now
      ~module( ) = default;
 
-     // pattern is a hex string -> "\xAa\xBb\xCc..."
-     // mask is a string of the same size as pattern
-     // x's mark normal byte, ?'s mark a wildcard (aka we skip that byte,
-     // usually due to it being a pointer => assigned at runtime)
-     uintptr_t scan_pattern( const std::string& pattern, const std::string& mask, size_t offset = 0 ) const;
+     // pattern is an ida-style ( "Aa Bb ? Dd ..." ) pattern string (because nullterms were blowing up the hex string)
+     // ?'s mark a wildcard (aka we skip that byte, usually due to it being a pointer => assigned at runtime)
+     uintptr_t scan_pattern( const std::string& pattern, size_t offset = 0 ) const;
 
-     uintptr_t scan_pattern( const byte* pattern, const byte* mask, size_t pattern_size, size_t offset = 0 ) const;
+     // string pattern still generates a mask
+     // in case we need to use a byte array (never)
+     uintptr_t scan_pattern( const std::vector< byte >& pattern, const std::vector< bool >& mask, const size_t pattern_size, const size_t offset = 0 ) const;
 
      [[nodiscard]] HMODULE get_handle( ) const;
+
+     uintptr_t get_offset_address( size_t );
 
      size_t get_offset( const uintptr_t from_addr );
 
