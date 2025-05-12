@@ -7,6 +7,8 @@
 namespace fonts {
     inline HFont watermark_font { 0 };
     inline HFont entity_esp { 0 };
+
+    inline HFont element_name { 0 };
 }
 
 namespace surface_wrapper {

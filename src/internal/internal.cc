@@ -8,6 +8,7 @@
 #include "../hooked/chlclient_framestagenotify.hh"
 #include "../hooked/vpanel_paint_traverse.hh"
 #include "../hooked/cmatsystem_drawtext.hh"
+#include "../hooked/cmodelrender_drawmodelsetup.hh"
 
 #include "../hooks/hooks.hh"
 
@@ -151,6 +152,13 @@ void internal::setup::main( HINSTANCE dll_instance ) {
     if ( succ_imatsystem_surface )
         cmatsystem_drawtext::original = imatsystem_surface_vmt_hook.get_original< cmatsystem_drawtext::def >( cmatsystem_drawtext::index );
 
+    const auto cmodelrender_vftable = utils::get_vftable( "engine.dll", "CModelRender" );
+    auto cmodelrender_vmt_hook = hooks::make_vmt_hook( cmodelrender_vftable );
+    const bool succ_cmodelrender = cmodelrender_vmt_hook.hook< cmodelrender_drawmodelsetup::def >( cmodelrender_drawmodelsetup::index, cmodelrender_drawmodelsetup::hook );
+
+    if ( succ_cmodelrender )
+        cmodelrender_drawmodelsetup::original = cmodelrender_vmt_hook.get_original< cmodelrender_drawmodelsetup::def >( cmodelrender_drawmodelsetup::index );
+
     printf( "waiting for end\n" );
 
     while ( !GetAsyncKeyState( VK_END ) )
@@ -158,6 +166,7 @@ void internal::setup::main( HINSTANCE dll_instance ) {
 
     vgui_panel_wrapper_vmt_hook.unhook( vpanel_paint_traverse::index );
     imatsystem_surface_vmt_hook.unhook( cmatsystem_drawtext::index );
+    cmodelrender_vmt_hook.unhook( cmodelrender_drawmodelsetup::index );
 
     printf( "bye\n" );
 

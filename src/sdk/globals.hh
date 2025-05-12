@@ -28,4 +28,12 @@ struct Color {
     Color( const unsigned char r, const unsigned char g, const unsigned char b, const unsigned char a ) : _color { r, g, b, a } { }
 };
 
+struct QAngle {
+    float x, y, z;
+
+    QAngle( ) : x( 0 ), y( 0 ), z( 0 ) { };
+    explicit QAngle( const float a ) : x( a ), y( a ), z( a ) { };
+    explicit QAngle( const float x, const float y, const float z ) : x( x ), y( y ), z( z ) { };
+};
+
 #endif //GLOBALS_HH

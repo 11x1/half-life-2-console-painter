@@ -19,14 +19,14 @@ void interfaces::setup( ) {
     // tried to deref again, boom correct vtbl -> double deref for obj
     engine_renderer = **reinterpret_cast< crender *** >( engine_render_addr );
 
-    printf( "engine_renderer* addr=%p\n", engine_renderer );
-
-    printf( "addr off=%p ptr off=%p\n", mod->get_offset( engine_render_addr ), mod->get_offset( reinterpret_cast< uintptr_t >( engine_renderer ) ) );
+    // printf( "engine_renderer* addr=%p\n", engine_renderer );
+    // printf( "addr off=%p ptr off=%p\n", mod->get_offset( engine_render_addr ), mod->get_offset( reinterpret_cast< uintptr_t >( engine_renderer ) ) );
 
     //const auto surface_addr = utils::get_module( "client.dll" )->get_offset_address( 0x2C830F + 0x02 );
     const auto csurf_addr = utils::scan_pattern( "client.dll", "8B 0D ? ? ? ? 52 8B 01 FF 50 ? E9" ) + 2;
     interfaces::c_surface = **reinterpret_cast< surface*** >( csurf_addr );
-    printf( "c_surface=%p\n", interfaces::c_surface );
+
+    //printf( "c_surface=%p\n", interfaces::c_surface );
 
     vgui_panel = utils::bruteforce_interface< uintptr_t >( "VGUI_Panel009" );
 

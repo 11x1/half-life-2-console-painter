@@ -36,4 +36,6 @@ void hl2_watermark::run( ) {
     surface_wrapper::draw_rectangle_filled( watermark_pos, watermark_size, watermark_col );
     surface_wrapper::draw_rectangle( watermark_pos, watermark_size, watermark_outline_col );
     surface_wrapper::draw_text( watermark_text, watermark_text_pos, watermark_text_col, fonts::watermark_font );
+
+    m_watermark_checkbox.draw( );
 }

@@ -70,6 +70,11 @@ uintptr_t utils::get_vftable( const std::string& module_name, const std::string&
     // since there might be many matching patterns
     // for the wanted col, we want to prioritise
     // the lowest offset + inheritance combo
+    //
+    // here offset means offset of this vtable in complete class (from top)
+    // so since inherited vtables come after our
+    // wanted vftable, we're looking for offset 0
+    // (vftables will always be at the "top" of the object)
 
     std::vector< bool > col_mask {
         false, false, false, false,
@@ -92,23 +97,38 @@ uintptr_t utils::get_vftable( const std::string& module_name, const std::string&
 
     size_t off { 0 };
     uintptr_t last_vftbl { 0 };
-    while ( const auto a = utils::scan_pattern( module_name, col_pattern, col_mask, 16, off ) ) {
-        off = m_modules[ module_name ].get( )->get_offset( a ) + 16;
+    size_t last_biggest_offset_from_top { INT_MAX };
+    while ( const auto col_pattern_match = utils::scan_pattern( module_name, col_pattern, col_mask, 16, off ) ) {
+        // next scan starts at the end of out vftable
+        off = m_modules[ module_name ].get( )->get_offset( col_pattern_match ) + 16;
 
-        printf( "[%s] Found col pattern match at %#x\n", __FUNCTION__, m_modules[ module_name ].get( )->get_offset( a ) );
+        printf( "[%s] Found col pattern match at %#x\n", __FUNCTION__, m_modules[ module_name ].get( )->get_offset( col_pattern_match ) );
 
         // find a ptr to col addr
         std::vector< byte > col_ptr_pat{
-            static_cast<byte>( a       & 0xFF ), // Dd (lsb)
-            static_cast<byte>( a >>  8 & 0xFF ), // Cc
-            static_cast<byte>( a >> 16 & 0xFF ), // Bb
-            static_cast<byte>( a >> 24 & 0xFF ), // Aa
+            static_cast<byte>( col_pattern_match       & 0xFF ), // Dd (lsb)
+            static_cast<byte>( col_pattern_match >>  8 & 0xFF ), // Cc
+            static_cast<byte>( col_pattern_match >> 16 & 0xFF ), // Bb
+            static_cast<byte>( col_pattern_match >> 24 & 0xFF ), // Aa
         };
+
+        // get offset from col, COL+0x04
+        // col+0x04 = addr
+        // deref addr for value
+        const auto offset_from_top = *reinterpret_cast< int* >( col_pattern_match + 4 );
 
         const auto not_col = utils::scan_pattern( module_name, col_ptr_pat, { false, false, false, false }, 4 );
 
         printf( "[%s] col ref @ %#x (off=%#x) -> vftbl: %#x (off=%#x)\n", __FUNCTION__, not_col, debug_mod->get_offset( not_col ), not_col + 0x4, debug_mod->get_offset( not_col + 0x4 ) );
-        last_vftbl = not_col + 0x4;
+
+        if ( offset_from_top < last_biggest_offset_from_top ) {
+            last_vftbl = not_col + 0x4;
+            last_biggest_offset_from_top = offset_from_top;
+
+            // if it is our vftable, we can stop searching
+            if ( offset_from_top == 0 )
+                break;
+        }
     };
 
     return last_vftbl;

@@ -1,6 +1,7 @@
 #ifndef VPANEL_PAINT_TRAVERSE_HH
 #define VPANEL_PAINT_TRAVERSE_HH
 
+#include "../internal/globals.hh"
 #include "../features/entity_esp.hh"
 #include "../features/watermark.hh"
 
@@ -17,6 +18,10 @@ namespace vpanel_paint_traverse {
         const auto name = utils::get_vfunc< const char*( __thiscall* )( void* ) >( a3, 35 )( a3 );
 
         if ( strcmp( name, "CHudViewport" ) == 0 ) {
+            const auto time = std::chrono::steady_clock::now( );
+            const long long time_ms = time.time_since_epoch( ).count( ) / 1000000;
+            globals::m_current_time = time_ms;
+
             interfaces::c_surface->draw_filled_rect( Vector( 100.f, 100.f ), Vector( 100.f, 50.f ) );
             entity_esp::run( );
             hl2_watermark::run( );
