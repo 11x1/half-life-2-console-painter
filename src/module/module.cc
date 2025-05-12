@@ -48,9 +48,9 @@ uintptr_t module::scan_pattern( const std::vector< byte >& pattern, const std::v
     for ( size_t i = offset; i < m_info.SizeOfImage - pattern_size; i++ ) {
         bool failed { false };
 
-        if ( i == 0x173695 ) {
-            debug = true;
-        }
+        // if ( i == 0x173695 ) {
+        //     debug = true;
+        // }
 
         // check through pattern bytes
         for ( size_t pat_i = 0; pat_i < pattern_size; pat_i++ ) {

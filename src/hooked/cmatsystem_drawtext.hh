@@ -5,11 +5,11 @@
 #include <string>
 
 namespace cmatsystem_drawtext {
-    using def = void ( __cdecl* )( void*, int, int, int, int r, int g, int b, int a, const char* fmt );
+    using def = void ( __cdecl* )( void*, int, int, int, int r, int g, int b, int a, const char* fmt, ... );
     inline def original{ nullptr };
     inline size_t index = 0x288 / 4;
 
-    inline void __cdecl hook( void* thisptr, int font, int x, int y, int r, int g, int b, int a, const char* fmt ) {
+    inline void __cdecl hook( void* thisptr, int font, int x, int y, int r, int g, int b, int a, const char* fmt, ... ) {
         char buffer[ 4096 ];
         va_list args;
         va_start( args, fmt );
