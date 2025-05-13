@@ -22,7 +22,7 @@ uintptr_t utils::get_vftable( const std::string& module_name, const std::string&
     const auto debug_mod = m_modules[ module_name ].get( );
 
     const std::string rtti_class_name = std::format( ".?AV{}@@", class_name );
-    LOG_DEBUG( "rtti_class_name: {}", rtti_class_name.c_str( ) );
+    LOG( debug, "rtti_class_name: {}", rtti_class_name.c_str( ) );
 
     const auto mask = std::string( rtti_class_name.size( ), 'x' );
     std::vector< byte > rtti_class_name_bytes { };
@@ -36,7 +36,7 @@ uintptr_t utils::get_vftable( const std::string& module_name, const std::string&
 
     if ( !str_addr ) return 0;
 
-    LOG_DEBUG( "straddr: 0x{:X}", debug_mod->get_offset( str_addr ) );
+    LOG( debug, "straddr: 0x{:X}", debug_mod->get_offset( str_addr ) );
 
     // type info (32bit) is type descriptor name address
     // - 8 bytes
@@ -56,7 +56,7 @@ uintptr_t utils::get_vftable( const std::string& module_name, const std::string&
 
     // @ 0xAaBbCcDd
     const auto type_info_addr = str_addr - 0x8;
-    LOG_DEBUG( "type_info_addr: 0x{:X}", debug_mod->get_offset( type_info_addr ) );
+    LOG( debug, "type_info_addr: 0x{:X}", debug_mod->get_offset( type_info_addr ) );
 
     // cool thing about col (aka Complete Object Locator) is that
     // it has a recognisable signature (also references type info inside of it as said before)
@@ -93,7 +93,7 @@ uintptr_t utils::get_vftable( const std::string& module_name, const std::string&
         static_cast<byte>( type_info_addr >> 24 & 0xFF ), // Aa
     };
 
-    LOG_DEBUG( "colpat:\n\t\t\t  12*(0 0 0 0) + {:X} {:X} {:X} {:X}", col_pattern[ 12 ], col_pattern[ 13 ], col_pattern[ 14 ], col_pattern[ 15 ] );
+    LOG( debug, "colpat:\n\t\t\t  12*(0 0 0 0) + {:X} {:X} {:X} {:X}", col_pattern[ 12 ], col_pattern[ 13 ], col_pattern[ 14 ], col_pattern[ 15 ] );
 
     size_t off { 0 };
     uintptr_t last_vftbl { 0 };
@@ -102,7 +102,7 @@ uintptr_t utils::get_vftable( const std::string& module_name, const std::string&
         // next scan starts at the end of out vftable
         off = m_modules[ module_name ].get( )->get_offset( col_pattern_match ) + 16;
 
-        LOG_DEBUG( "found col pattern match at 0x{:X}", m_modules[ module_name ].get( )->get_offset( col_pattern_match ) );
+        LOG( debug, "found col pattern match at 0x{:X}", m_modules[ module_name ].get( )->get_offset( col_pattern_match ) );
 
         // find a ptr to col addr
         std::vector< byte > col_ptr_pat{
@@ -119,7 +119,7 @@ uintptr_t utils::get_vftable( const std::string& module_name, const std::string&
 
         const auto not_col = utils::scan_pattern( module_name, col_ptr_pat, { false, false, false, false }, 4 );
 
-        LOG_INFO( "col ref @ 0x{:X} (off=0x{:X}) -> vftbl: 0x{:X} (off=0x{:X})", not_col, debug_mod->get_offset( not_col ), not_col + 0x4, debug_mod->get_offset( not_col + 0x4 ) );
+        LOG( info, "col ref @ 0x{:X} (off=0x{:X}) -> vftbl: 0x{:X} (off=0x{:X})", not_col, debug_mod->get_offset( not_col ), not_col + 0x4, debug_mod->get_offset( not_col + 0x4 ) );
 
         if ( offset_from_top < last_biggest_offset_from_top ) {
             last_vftbl = not_col + 0x4;

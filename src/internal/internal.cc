@@ -3,7 +3,7 @@
 #include "internal.hh"
 
 #include "interfaces.hh"
-#include "macros.hh"
+#include "log.hh"
 #include "utils.hh"
 
 #include "../hooked/chlclient_framestagenotify.hh"
@@ -26,12 +26,23 @@ class steamutils;
 using namespace std::chrono_literals;
 using namespace std::string_literals;
 
-void internal::setup::main( HINSTANCE dll_instance ) {
-    AllocConsole( );
-    freopen_s( reinterpret_cast< FILE ** >( stdout ), "CONOUT$", "w", stdout );
+void internal::setup::main( const HINSTANCE dll_instance ) {
+    if ( !GetConsoleWindow( ) ) {
+        AllocConsole( );
+        freopen_s( reinterpret_cast< FILE ** >( stdout ), "CONOUT$", "w", stdout );
+    }
 
     globals::console_handle = GetStdHandle( STD_OUTPUT_HANDLE );
-    SetConsoleMode( globals::console_handle, ENABLE_PROCESSED_OUTPUT );
+    SetConsoleMode( globals::console_handle, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING );
+
+    g_log.setup( );
+
+    char win_name_buf[ MAX_PATH ];
+    DWORD win_name_len = MAX_PATH;
+    GetUserNameA( win_name_buf, &win_name_len );
+    LOG( info, "Hello {}, this build is from {}", win_name_buf, __DATE__ );
+
+    std::this_thread::sleep_for( 10s );
 
     while ( !GetModuleHandleA( "engine.dll" ) )
         std::this_thread::sleep_for( 1s );
@@ -48,7 +59,7 @@ void internal::setup::main( HINSTANCE dll_instance ) {
         using get_engine_version_t = int( __stdcall* )( );
         const auto get_engine_version_func = reinterpret_cast< get_engine_version_t >( get_engine_version );
 
-        LOG_SUCCESS( "Engine version: {}", get_engine_version_func( ) );
+        LOG( success, "engine version: {}", get_engine_version_func( ) );
     }
 
     // const auto string_addr = utils::scan_pattern( "engine.dll", ".?AVIVEngineClient013@@", "xxxxxxxxxxxxxxxxxxxxxxx" );
@@ -66,15 +77,15 @@ void internal::setup::main( HINSTANCE dll_instance ) {
         const auto lol = reinterpret_cast< steamutils * >(
             SteamInternal_FindOrCreateUserInterface( 0, "SteamUtils010" ) );
 
-        LOG_SUCCESS( "batterypc: {}%", static_cast< int >( lol->get_current_battery_power( ) ) );
+        LOG( success, "batterypc: {}%", static_cast< int >( lol->get_current_battery_power( ) ) );
     }
 
 
     if ( interfaces::entitylist ) {
-        LOG_DEBUG( "found client entitylist" );
+        LOG( debug, "found client entitylist" );
 
         const auto highest_entity_index = interfaces::entitylist->get_highest_entity_index( );
-        LOG_DEBUG( "highest entity index: {}", highest_entity_index );
+        LOG( debug, "highest entity index: {}", highest_entity_index );
 
         int chl2_player_index{ -1 };
         uintptr_t* chl2_player{ nullptr };
@@ -101,17 +112,16 @@ void internal::setup::main( HINSTANCE dll_instance ) {
             }
         }
 
-        LOG_INFO( "entdump\n" );
+        LOG( info, "entdump" );
         for ( const auto pair : seen_ents ) {
-            LOG_INFO( "\t{} {} entitie(s)", pair.second, pair.first );
+            LOG( info, "         {} {} entitie(s)", pair.second, pair.first );
         }
-        printf( "\n\n" );
 
         if ( chl2_player ) {
-            LOG_DEBUG( "CHL2_Player addr: {:p}", reinterpret_cast< void* >( chl2_player ) );
+            LOG( debug, "CHL2_Player addr: {:p}", reinterpret_cast< void* >( chl2_player ) );
             const auto cliententity = reinterpret_cast< byte * >( interfaces::entitylist->get_client_entity(
                 chl2_player_index ) );
-            LOG_DEBUG( "same as IClientEntity: {:p}", reinterpret_cast< void* >( chl2_player ) );
+            LOG( debug, "same as IClientEntity: {:p}", reinterpret_cast< void* >( chl2_player ) );
 
             // 28 D0 96 5A
             // CC D4 96 5A
@@ -126,11 +136,11 @@ void internal::setup::main( HINSTANCE dll_instance ) {
             for ( int j = 0; j < 4; j++ ) {
                 const auto vftbl = *reinterpret_cast< uintptr_t * >( cliententity + j * 4 );
                 const auto off = mod->get_offset( vftbl );
-                LOG_DEBUG( "\tvftbl {} offset= 0x{:X}", j, off );
+                LOG( debug, "         vftbl {} offset= 0x{:X}", j, off );
             }
         }
     } else {
-        LOG_ERROR( "couldn't find client entitylist" );
+        LOG( error, "couldn't find client entitylist" );
     }
 
     INITIALIZE_VFTABLE_HOOK( engine.dll, CClientState, chlclient_framestagenotify );
@@ -143,10 +153,8 @@ void internal::setup::main( HINSTANCE dll_instance ) {
     // todo: material builder for chams (needs menu framework)
     //       https://developer.valvesoftware.com/wiki/Category:Shader_parameters
 
-    // todo: game crashes on second inject sometimes, when loaded ingame
-
     if ( matsystem ) {
-        LOG_DEBUG( "creating testmaterial" );
+        LOG( debug, "creating testmaterial" );
 
         auto test_mat = keyvalues( "UnlitGeneric" );
         test_mat.set_string( "$basetexture", "vgui/white_additive" );
@@ -159,18 +167,19 @@ void internal::setup::main( HINSTANCE dll_instance ) {
         const auto cmodelrender_vftable = utils::get_vftable( "engine.dll", "CModelRender" );
         modelrender_internals::forced_material_override = *reinterpret_cast< void(__stdcall*)(material*, int) >( reinterpret_cast< void** >( cmodelrender_vftable )[ 1 ] );
     } else {
-        LOG_ERROR( "failed to find VMaterialSystem081" );
+        LOG( error, "failed to find VMaterialSystem081" );
     }
 
-    LOG_INFO( "press END to unninject" );
+    LOG( info, "press END to unninject" );
 
     while ( !GetAsyncKeyState( VK_END ) )
         std::this_thread::sleep_for( 500ms );
 
     hooks::unhook_all( );
 
-    LOG_INFO( "bye" );
+    LOG( info, "bye" );
 
+    fclose( stdout );
     FreeConsole( );
     FreeLibraryAndExitThread( dll_instance, EXIT_SUCCESS );
 }
@@ -188,13 +197,18 @@ void internal::setup::modules( ) {
     HANDLE hProcess = GetCurrentProcess( );
     DWORD cbNeeded;
 
+    const auto modules_list = g_log.list( 10 )->prefix( "         loaded module " )->spew( );
+    const auto line_waiting_modules = g_log.line( "loading modules" )->prefix( log::components::prefix( "loading", color( 0xffe699 ) ) )->spew( );
+
     if ( EnumProcessModules( hProcess, hMods, sizeof( hMods ), &cbNeeded ) ) {
         for ( unsigned int i = 0; i < ( cbNeeded / sizeof( HMODULE ) ); i++ ) {
             char szModName[ MAX_PATH ];
             GetModuleBaseNameA( hProcess, hMods[ i ], szModName, sizeof( szModName ) );
             CREATE_MODULE( std::string( szModName ).c_str( ) );
+
+            modules_list->line( std::string( szModName ) );
         }
     }
 
-    LOG_LOADING_END( "loaded {} modules", cbNeeded / sizeof( HMODULE ) );
+    line_waiting_modules->update_entry( *log::components::entry_t( std::format( "loaded {} modules", cbNeeded / sizeof( HMODULE ) ) ).prefix( log::prefixes::success ) );
 }

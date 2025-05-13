@@ -3,6 +3,7 @@
 //
 
 #include "module.hh"
+#include "../internal/log.hh"
 
 #include <format>
 #include <sstream>
@@ -57,24 +58,24 @@ uintptr_t module::scan_pattern( const std::vector< byte >& pattern, const std::v
             // ? marks a wildcard
             if ( mask[ pat_i ] ) {
                 if ( debug )
-                    LOG_DEBUG( "[wildcard] skipping pattern {} (?)", pat_i );
+                    LOG( debug, "[wildcard] skipping pattern {} (?)", pat_i );
                 continue;
             };
             const byte pattern_byte = pattern[ pat_i ];
             const byte module_byte = module_bytes[ i + pat_i ];
             if ( pattern_byte != module_byte ) {
-                if ( debug ) LOG_DEBUG( "[mismatch] pos={} @ pat={:X} act={:X}", pat_i, pattern_byte, module_byte );
+                if ( debug ) LOG( debug, "[mismatch] pos={} @ pat={:X} act={:X}", pat_i, pattern_byte, module_byte );
 
                 failed = true;
                 break;
             }
 
             if ( debug )
-                LOG_DEBUG( "[match] pos={} {:X}", pat_i, pattern_byte );
+                LOG( debug, "[match] pos={} {:X}", pat_i, pattern_byte );
         }
 
         if ( !failed ) {
-            LOG_INFO( "\"{}\" found @ off=0x{:X}", get_filename( ).c_str( ), i );
+            LOG( info, "\"{}\" found @ off=0x{:X}", get_filename( ).c_str( ), i );
             // our found match addr is at module bytes + i
             return reinterpret_cast< uintptr_t >( module_bytes + i );
         } else debug = false;

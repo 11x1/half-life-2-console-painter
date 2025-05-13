@@ -31,15 +31,18 @@ public:
 
     ~vmt_hook( ) { unhook_all( ); }
 
-    template< typename Fn >
-    bool hook( size_t index, Fn override_fn ) {
-        LOG_LOADING( "\"{}\": step 0", m_name.c_str( ) );
+    template< typename Fn, typename Orig >
+    bool hook( size_t index, Fn override_fn, Orig* orig_fn ) {
+        const auto hook_log = g_log.list( 3 )->prefix( "         " )->spew( );
+        const auto hook_result = g_log.line( "waiting for hook" )->prefix( log::prefixes::info )->spew( );
+
+        hook_log->line( std::format( "\"{}\": step 0", m_name.c_str( ) ) );
 
         // dont hook twice, otherwise we lose the original
         if ( m_originals.contains( index ) )
             return false;
 
-        LOG_LOADING( "\"{}\": step 1", m_name.c_str( ) );
+        hook_log->line( std::format( "\"{}\": step 1", m_name.c_str( ) ) );
 
         auto* vf_arr = reinterpret_cast< uintptr_t * >( m_vtbl_addr );
 
@@ -53,23 +56,25 @@ public:
             &old_prot
         );
 
-        LOG_LOADING( "VirtualProtect({:p}, {}, {}, {})\n",
-                reinterpret_cast< void* >( m_vtbl_addr + index * sizeof( void * ) ),
-                sizeof( void * ),
-                PAGE_EXECUTE_READWRITE,
-                old_prot
-        );
+        hook_log->line( std::format( "VirtualProtect({:p}, {}, {}, {})\n",
+                                     reinterpret_cast< void * >( m_vtbl_addr + index * sizeof( void * ) ),
+                                     sizeof( void * ),
+                                     PAGE_EXECUTE_READWRITE,
+                                     old_prot
+        ) );
 
         if ( !succ ) {
-            LOG_ERROR( "\"{}\"failed to protect memory: {}", m_name.c_str( ), GetLastError( ) );
+            hook_result->update_entry( std::format( "\"{}\" failed to protect memory: {}", m_name.c_str( ),
+                                                    GetLastError( ) ) );
             return false;
         }
 
-        LOG_LOADING( "\"{}\": step 2", m_name.c_str( ) );
+        hook_log->line( std::format( "\"{}\": step 2", m_name.c_str( ) ) );
 
         // store original function, not address
         // (we protected address, we store the function)
         m_originals[ index ] = vf_arr[ index ];
+        *orig_fn = reinterpret_cast< Orig >( vf_arr[ index ] );
 
         // set hook
         vf_arr[ index ] = reinterpret_cast< uintptr_t >( override_fn );
@@ -85,23 +90,26 @@ public:
         // expect to succeed restoting prot
         assert( succ );
 
-        LOG_LOADING_END( "\"{}\" hooked {}", m_name.c_str( ), index );
+        hook_result->update_entry( std::format( "\"{}\" hooked {}", m_name.c_str( ), index ) );
 
         // yay we hooked successfully
         return true;
     }
 
 
-    bool unhook( size_t index ) {
-        LOG_LOADING( "\tunhook: step 0" );
+    bool unhook( const size_t index ) {
+        const auto unhook_log = g_log.list( 3 )->prefix( "         " )->spew( );
+        const auto unhook_result = g_log.line( "waiting for unhook" )->prefix( log::prefixes::info )->spew( );
+
+        unhook_log->line( "unhook: step 0" );
 
         // dont unhook when no orig
         if ( !m_originals.contains( index ) )
             return false;
 
-        LOG_LOADING( "\tunhook: step 1" );
+        unhook_log->line( "unhook: step 1" );
 
-        uintptr_t* vf_arr = reinterpret_cast< uintptr_t * >( m_vtbl_addr );
+        const auto vf_arr = reinterpret_cast< uintptr_t * >( m_vtbl_addr );
 
         DWORD old_prot;
         bool succ = VirtualProtect(
@@ -112,11 +120,13 @@ public:
         );
 
         if ( !succ ) {
-            printf( "Failed to protect memory: %d\n", GetLastError( ) );
+            unhook_result->update_entry(
+                *log::components::entry_t( std::format( "Failed to protect memory: %d\n", GetLastError( ) ) ).prefix(
+                    log::prefixes::error ) );
             return false;
         }
 
-        LOG_LOADING( "\tunhook: step 2" );
+        unhook_log->line( "unhook: step 2" );
 
         // restore original
         vf_arr[ index ] = m_originals[ index ];
@@ -134,7 +144,7 @@ public:
 
         m_originals.erase( index );
 
-        LOG_LOADING_END( "\tunhook: step 3" );
+        unhook_result->update_entry( std::format( "\"{}\" unhooked {}", m_name.c_str( ), index ) );
 
         // yay we hooked successfully
         return true;
@@ -164,9 +174,9 @@ public:
                         } );
 
         for ( const auto idx : keys ) {
-            LOG_INFO( "unhooking \"{}\" idx {}", m_name, idx );
+            LOG( info, "unhooking \"{}\" idx {}", m_name, idx );
             assert( unhook( idx ) );
-            LOG_INFO( " -> success" );
+            LOG( info, " -> success" );
         }
     }
 };

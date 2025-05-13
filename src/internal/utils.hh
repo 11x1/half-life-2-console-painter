@@ -7,6 +7,7 @@
 #include <ranges>
 #include <vector>
 
+#include "log.hh"
 #include "../module/module.hh"
 
 namespace utils {
@@ -39,6 +40,9 @@ namespace utils {
 
     template < typename T >
     T* bruteforce_interface( const std::string& interface_name, const std::vector< std::string >& blacklisted_modules = { } ) {
+        const auto bruteforce_list = g_log.list( 5 )->spew( );
+        const auto waiting_bruteforce = g_log.line( "waiting for bruteforce" )->prefix( log::prefixes::info )->spew( );
+
         for ( const auto& mod : m_modules | std::views::values ) {
             if ( std::ranges::find( blacklisted_modules, mod->get_filename( ) ) != blacklisted_modules.end( ) )
                 continue;
@@ -49,10 +53,10 @@ namespace utils {
 
             const auto inter = reinterpret_cast< T* ( * )( const char*, int* ) >( create_interface )( interface_name.c_str( ), nullptr );
 
-            LOG_LOADING( "\"{}\"->\"{}\"", mod->get_filename( ).c_str( ), interface_name.c_str( ) );
+            bruteforce_list->line( std::format( "         \"{}\"->\"{}\"", mod->get_filename( ).c_str( ), interface_name.c_str( ) ) );
 
             if ( inter ) {
-                LOG_LOADING_END( "found \"{}\" in \"{}\"", interface_name.c_str( ), mod->get_filename( ).c_str( ) );
+                waiting_bruteforce->update_entry( *log::components::entry_t( std::format( "found \"{}\" in \"{}\"", interface_name.c_str( ), mod->get_filename( ).c_str( ) ) ).prefix( log::prefixes::success ) );
                 return inter;
             }
         }

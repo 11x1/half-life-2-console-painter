@@ -41,9 +41,11 @@ return_type call_type all_hooks::hook_name::hook( __VA_ARGS__ )
     { \
         const auto vft = utils::get_vftable( #module, #classname ); \
         auto vmt = hooks::make_vmt_hook( vft, #classname ); \
-        const bool succ = vmt->hook< all_hooks::namespace_::def >( all_hooks::namespace_::index, all_hooks::namespace_::hook ); \
-        if ( succ ) \
-            all_hooks::namespace_::original = vmt->get_original< all_hooks::namespace_::def >( all_hooks::namespace_::index ); \
+        const bool succ = vmt->hook< all_hooks::namespace_::def >( all_hooks::namespace_::index, all_hooks::namespace_::hook, &all_hooks::namespace_::original ); \
+         \
+        if ( !succ ) { \
+            LOG( error, "failed to hook \"{}\" ({}) in \"{}\"", #classname, all_hooks::namespace_::index, #module );\
+        }\
     } \
 }
 

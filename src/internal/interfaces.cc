@@ -9,7 +9,7 @@ void interfaces::setup( ) {
 
     // all sigs too vague
     const auto engine_render_addr = mod->get_offset_address( 0x14EAC9 + 0x2 );
-    LOG_DEBUG( "enginerender addr={:p}", reinterpret_cast< void* >( engine_render_addr ) );
+    LOG( debug, "enginerender addr={:p}", reinterpret_cast< void* >( engine_render_addr ) );
 
     // so initially thought this shouldve been a single deref
     // but turns out its a double deref
@@ -31,7 +31,7 @@ void interfaces::setup( ) {
     vgui_panel = utils::bruteforce_interface< uintptr_t >( "VGUI_Panel009" );
 
     assert( vgui_panel );
-    LOG_DEBUG( "VGUI_Panel009 obj @ -> {:p}", reinterpret_cast< void* >( vgui_panel ) );
+    LOG( debug, "VGUI_Panel009 obj @ -> {:p}", reinterpret_cast< void* >( vgui_panel ) );
 
-    LOG_SUCCESS( "interfaces", __FUNCTION__ );
+    LOG( success, "interfaces", __FUNCTION__ );
 }
