@@ -18,10 +18,13 @@ class input_handler {
 private:
     std::map< unsigned int, key_state_t > m_key_states{ };
 
+    void update_key( const unsigned int key );
 public:
     input_handler( ) = default;
 
     ~input_handler( ) = default;
+
+    void update_keys( );
 
     void check_key( const unsigned int key );
     bool is_key_held( const unsigned int key );

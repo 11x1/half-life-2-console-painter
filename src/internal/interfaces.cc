@@ -9,7 +9,7 @@ void interfaces::setup( ) {
 
     // all sigs too vague
     const auto engine_render_addr = mod->get_offset_address( 0x14EAC9 + 0x2 );
-    printf( "enginerender addr=%p\n", engine_render_addr );
+    LOG_DEBUG( "enginerender addr={:p}", reinterpret_cast< void* >( engine_render_addr ) );
 
     // so initially thought this shouldve been a single deref
     // but turns out its a double deref
@@ -24,14 +24,14 @@ void interfaces::setup( ) {
 
     //const auto surface_addr = utils::get_module( "client.dll" )->get_offset_address( 0x2C830F + 0x02 );
     const auto csurf_addr = utils::scan_pattern( "client.dll", "8B 0D ? ? ? ? 52 8B 01 FF 50 ? E9" ) + 2;
-    interfaces::c_surface = **reinterpret_cast< surface*** >( csurf_addr );
+    interfaces::c_surface = **reinterpret_cast< surface *** >( csurf_addr );
 
     //printf( "c_surface=%p\n", interfaces::c_surface );
 
     vgui_panel = utils::bruteforce_interface< uintptr_t >( "VGUI_Panel009" );
 
     assert( vgui_panel );
-    printf( "VGUI_Panel009 obj @ -> %p\n", vgui_panel );
+    LOG_DEBUG( "VGUI_Panel009 obj @ -> {:p}", reinterpret_cast< void* >( vgui_panel ) );
 
-    printf( "[%s] done\n", __FUNCTION__ );
+    LOG_SUCCESS( "interfaces", __FUNCTION__ );
 }

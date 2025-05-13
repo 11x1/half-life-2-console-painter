@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "../internal/macros.hh"
+
 class module {
 private:
      HMODULE m_handle { nullptr };
@@ -37,7 +39,7 @@ public:
           // skip first slash (since srtrrchtrrt returns from last "/...")
           m_filename = std::string( path_buf + 1 );
 
-          printf( "[%s] created module \"%s\"\n", __FUNCTION__, m_filename.data( ) );
+          LOG_LOADING( "created module \"{}\"", m_filename.data( ) );
 
           const auto curproc = GetCurrentProcess( );
           assert( curproc );

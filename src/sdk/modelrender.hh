@@ -27,7 +27,7 @@ struct model_t
 };
 
 
-struct __declspec(align(4)) ModelRenderInfo_t
+struct ModelRenderInfo_t
 {
     Vector origin;
     QAngle angle;
@@ -55,6 +55,32 @@ struct DrawModelState_t
     int m_lod;
 };
 
+namespace modelrender_internals {
+    inline void (__stdcall *forced_material_override)(material *new_mat, int);
+}
 
+/*
+class model_render;
+
+struct model_render_vtbl
+{
+    void (__stdcall *forced_material_override)(material *new_mat, int);
+    void *gap0[15];
+    int (__thiscall *draw_model_ex)(model_render *, void *);
+    void *gap44;
+    bool (__thiscall *draw_model_setup)(model_render *, ModelRenderInfo_t *, DrawModelState_t *state, void *mat3x4_custombone2world, void **mat3x4_bone2worldout);
+    void (__thiscall *draw_model_execute)(model_render *, DrawModelState_t *state, ModelRenderInfo_t *, void *mat3x4_bone2world);
+};
+
+class model_render {
+private:
+    model_render_vtbl* vtbl;
+
+public:
+    void forced_material_override( material* mat, int type = 0 ) {
+        vtbl->forced_material_override( mat, type );
+    }
+};
+*/
 
 #endif //MODELRENDER_HH

@@ -8,11 +8,13 @@
 #include <cstdint>
 #include <map>
 #include <ranges>
+#include <utility>
 #include <vector>
 
 
 class vmt_hook {
 private:
+    std::string m_name{ "<empty hook name>" };
     uintptr_t m_vtbl_addr;
 
     // we set the original at index to map
@@ -23,19 +25,23 @@ public:
     explicit vmt_hook( const uintptr_t vtbl_addr ) : m_vtbl_addr( vtbl_addr ) {
     }
 
+    explicit vmt_hook( const uintptr_t vtbl_addr, std::string name ) : m_name( std::move( name ) ),
+                                                                       m_vtbl_addr( vtbl_addr ) {
+    }
+
     ~vmt_hook( ) { unhook_all( ); }
 
     template< typename Fn >
     bool hook( size_t index, Fn override_fn ) {
-        printf( "hook: step 0\n" );
+        LOG_LOADING( "\"{}\": step 0", m_name.c_str( ) );
 
         // dont hook twice, otherwise we lose the original
         if ( m_originals.contains( index ) )
             return false;
 
-        printf( "hook: step 1\n" );
+        LOG_LOADING( "\"{}\": step 1", m_name.c_str( ) );
 
-        uintptr_t* vf_arr = reinterpret_cast< uintptr_t * >( m_vtbl_addr );
+        auto* vf_arr = reinterpret_cast< uintptr_t * >( m_vtbl_addr );
 
         DWORD old_prot;
         bool succ = VirtualProtect(
@@ -47,19 +53,19 @@ public:
             &old_prot
         );
 
-        printf( "tried to call VirtualProtect(%p, %d, %d, %d)\n",
-                m_vtbl_addr + index * sizeof( void * ),
+        LOG_LOADING( "VirtualProtect({:p}, {}, {}, {})\n",
+                reinterpret_cast< void* >( m_vtbl_addr + index * sizeof( void * ) ),
                 sizeof( void * ),
                 PAGE_EXECUTE_READWRITE,
                 old_prot
         );
 
         if ( !succ ) {
-            printf( "Failed to protect memory: %d\n", GetLastError( ) );
+            LOG_ERROR( "\"{}\"failed to protect memory: {}", m_name.c_str( ), GetLastError( ) );
             return false;
         }
 
-        printf( "hook: step 2\n" );
+        LOG_LOADING( "\"{}\": step 2", m_name.c_str( ) );
 
         // store original function, not address
         // (we protected address, we store the function)
@@ -79,19 +85,21 @@ public:
         // expect to succeed restoting prot
         assert( succ );
 
+        LOG_LOADING_END( "\"{}\" hooked {}", m_name.c_str( ), index );
+
         // yay we hooked successfully
         return true;
     }
 
 
     bool unhook( size_t index ) {
-        printf( "unhook: step 0\n" );
+        LOG_LOADING( "\tunhook: step 0" );
 
         // dont unhook when no orig
         if ( !m_originals.contains( index ) )
             return false;
 
-        printf( "unhook: step 1\n" );
+        LOG_LOADING( "\tunhook: step 1" );
 
         uintptr_t* vf_arr = reinterpret_cast< uintptr_t * >( m_vtbl_addr );
 
@@ -108,7 +116,7 @@ public:
             return false;
         }
 
-        printf( "unhook: step 2\n" );
+        LOG_LOADING( "\tunhook: step 2" );
 
         // restore original
         vf_arr[ index ] = m_originals[ index ];
@@ -126,7 +134,7 @@ public:
 
         m_originals.erase( index );
 
-        printf( "unhook: step 3\n" );
+        LOG_LOADING_END( "\tunhook: step 3" );
 
         // yay we hooked successfully
         return true;
@@ -149,16 +157,16 @@ public:
         // omg when removing while iterating map
         // it makes the iterator invalid
         // fix: store keys in a separate vector
-        std::vector< size_t > keys ( m_originals.size( ) );
+        std::vector< size_t > keys( m_originals.size( ) );
         std::transform( m_originals.begin( ), m_originals.end( ), keys.begin( ),
                         [ ]( const auto& pair ) {
                             return pair.first;
                         } );
-        
+
         for ( const auto idx : keys ) {
-            printf( " unhooking %d", idx );
+            LOG_INFO( "unhooking \"{}\" idx {}", m_name, idx );
             assert( unhook( idx ) );
-            printf( " -> success\n" );
+            LOG_INFO( " -> success" );
         }
     }
 };

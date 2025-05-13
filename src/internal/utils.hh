@@ -49,10 +49,10 @@ namespace utils {
 
             const auto inter = reinterpret_cast< T* ( * )( const char*, int* ) >( create_interface )( interface_name.c_str( ), nullptr );
 
-            printf( "[%s] \"%s\"->\"%s\"\n", __FUNCTION__, mod->get_filename( ).c_str( ), interface_name.c_str( ) );
+            LOG_LOADING( "\"{}\"->\"{}\"", mod->get_filename( ).c_str( ), interface_name.c_str( ) );
 
             if ( inter ) {
-                printf( "[%s] found \"%s\" on \"%s\"", __FUNCTION__, interface_name.c_str( ), mod->get_filename( ).c_str( ) );
+                LOG_LOADING_END( "found \"{}\" in \"{}\"", interface_name.c_str( ), mod->get_filename( ).c_str( ) );
                 return inter;
             }
         }

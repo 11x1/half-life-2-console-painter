@@ -5,5 +5,8 @@ struct material
 {
 };
 
+namespace mats {
+    inline material* test_material { nullptr };
+}
 
 #endif //MATERIAL_HH

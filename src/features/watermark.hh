@@ -5,8 +5,6 @@
 #include "../ui/components/checkbox.hh"
 
 namespace hl2_watermark {
-    inline checkbox m_watermark_checkbox { "watermark" };
-
     inline const Vector pad { 5, 3 };
     inline const Vector margin { 10, 10 };
 

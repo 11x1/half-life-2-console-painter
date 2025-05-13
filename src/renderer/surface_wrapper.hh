@@ -9,6 +9,11 @@ namespace fonts {
     inline HFont entity_esp { 0 };
 
     inline HFont element_name { 0 };
+
+    inline HFont tab_font { 0 };
+    inline HFont subtab_font { 0 };
+
+    inline HFont debug { 0 };
 }
 
 namespace surface_wrapper {

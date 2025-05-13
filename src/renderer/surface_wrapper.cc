@@ -4,7 +4,14 @@ void surface_wrapper::setup( ) {
     fonts::watermark_font = surface_wrapper::create_font( "Arial", 14, 300, FONTFLAG_ANTIALIAS );
     fonts::entity_esp = surface_wrapper::create_font( "Arial", 10, 300, FONTFLAG_ANTIALIAS | FONTFLAG_OUTLINE );
 
+
     fonts::element_name = surface_wrapper::create_font( "Arial", 12, 300, FONTFLAG_ANTIALIAS | FONTFLAG_DROPSHADOW );
+
+
+    fonts::tab_font = surface_wrapper::create_font( "ProggyCleanTT", 16, 400, FONTFLAG_ANTIALIAS | FONTFLAG_DROPSHADOW );
+    fonts::subtab_font = surface_wrapper::create_font( "ProggyCleanTT", 16, 400, FONTFLAG_ANTIALIAS | FONTFLAG_DROPSHADOW );
+
+    fonts::debug = surface_wrapper::create_font( "ProggyCleanTT", 8, 400, FONTFLAG_DROPSHADOW );
 }
 
 HFont surface_wrapper::create_font( const std::string& fontname, const int size, const int weight,
