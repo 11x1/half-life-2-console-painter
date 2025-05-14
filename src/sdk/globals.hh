@@ -2,6 +2,7 @@
 #define GLOBALS_HH
 
 #include <array>
+#include "string.h"
 
 struct globals_t {
     char gap0[12];
@@ -29,6 +30,10 @@ struct Color {
     unsigned char _color[ 4 ];
 
     explicit Color( const size_t hex ) {
+        if ( hex <= 0xFF ) {
+            _color[ 0 ] = _color[ 1 ] = _color[ 2 ] = _color[ 3 ] = static_cast< unsigned char >( hex );
+        }
+
         // 0xRrGgBbAa
         _color[ 3 ] = ( hex & 0x000000FF )      ;   // a
         _color[ 2 ] = ( hex & 0x0000FF00 ) >>  8;   // b
@@ -46,5 +51,29 @@ struct QAngle {
     explicit QAngle( const float a ) : x( a ), y( a ), z( a ) { };
     explicit QAngle( const float x, const float y, const float z ) : x( x ), y( y ), z( z ) { };
 };
+
+template <class T>
+__forceinline void V_swap( T& x, T& y )
+{
+    T temp = x;
+    x = y;
+    y = temp;
+}
+
+template <class T>
+inline void Destruct( T* pMemory )
+{
+    pMemory->~T();
+}
+
+template <class T>
+inline T* CopyConstruct( T* pMemory, T const& src )
+{
+    return ::new( pMemory ) T(src);
+}
+
+#define V_memmove(dest, src, count)		memmove((dest), (src), (count))
+#define Q_memmove				V_memmove
+
 
 #endif //GLOBALS_HH

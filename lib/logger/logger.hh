@@ -99,7 +99,8 @@ public:
 
     void setup( ) {
         // hide cursor
-        std::cout << "\x1B[?25l";
+        printf( "\x1B[?25l" );
+        SetConsoleCursorPosition( get_console( ), { 0, 0 } );
     }
 
     // maybe redo to

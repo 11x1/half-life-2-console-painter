@@ -42,7 +42,7 @@ void internal::setup::main( const HINSTANCE dll_instance ) {
     GetUserNameA( win_name_buf, &win_name_len );
     LOG( info, "Hello {}, this build is from {}", win_name_buf, __DATE__ );
 
-    std::this_thread::sleep_for( 10s );
+    std::this_thread::sleep_for( 2s );
 
     while ( !GetModuleHandleA( "engine.dll" ) )
         std::this_thread::sleep_for( 1s );
@@ -170,7 +170,7 @@ void internal::setup::main( const HINSTANCE dll_instance ) {
         LOG( error, "failed to find VMaterialSystem081" );
     }
 
-    LOG( info, "press END to unninject" );
+    LOG( info, "press END to uninject" );
 
     while ( !GetAsyncKeyState( VK_END ) )
         std::this_thread::sleep_for( 500ms );

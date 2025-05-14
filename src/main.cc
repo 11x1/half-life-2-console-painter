@@ -64,7 +64,7 @@ BOOL WINAPI DllMain(
             mode = std::format( "unknown[{:p}]", lpvReserved );
         }
 
-        LOG( warning, "{} module \"{}\" ({})", filename, reason, mode );
+        LOG( warning, "{} module \"{}\" ({})", reason, filename, mode );
     }
 
     return TRUE; // Successful DLL_PROCESS_ATTACH.

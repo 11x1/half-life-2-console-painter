@@ -23,8 +23,9 @@ void log::components::list_t::line( entry_t entry ) {
     const auto before_update_cursor = get_cursor_pos( );
     SetConsoleCursorPosition( get_console( ), { m_cursor[ 0 ], static_cast< SHORT >( m_cursor[ 1 ] - m_scroll_offset ) } );
     for ( const auto& e : m_entries ) {
-        std::cout << "\x1B[" << longest_entry << "X" << e.get_content( );
-        std::cout << '\n';
+        printf( "\x1B[%dX%s\n", longest_entry, e.get_content( ).c_str( ) );
+        //std::cout << "\x1B[" << longest_entry << "X" << e.get_content( );
+        // std::cout << '\n';
     }
     SetConsoleCursorPosition( get_console( ), { before_update_cursor[ 0 ], before_update_cursor[ 1 ] } );
 
@@ -51,7 +52,8 @@ log::components::list_t* log::components::list_t::spew( ) {
         }
 
         // if ( i != m_max_rows - 1 )
-            std::cout << std::endl;
+        //    std::cout << std::endl;
+        printf( "\n" );
     }
 
     return this;

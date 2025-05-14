@@ -31,7 +31,7 @@ size_t log::components::entry_t::length( ) const {
 }
 
 void log::components::entry_t::spew( ) const {
-    std::cout << get_content( ).c_str( );
+    printf( get_content( ).c_str( ) );
 }
 
 log::components::entry_t* log::components::entry_t::prefix( const std::string& prefix ) {

@@ -6,7 +6,7 @@ void log::components::line::update_entry( log::components::entry_t entry )  {
     // ESC [ <n> X -> erase n chars @ cursor
     const auto before_update_cursor = get_cursor_pos( );
     SetConsoleCursorPosition( get_console( ), { m_cursor[ 0 ], static_cast< SHORT >( m_cursor[ 1 ] - m_scroll_offset ) } );
-    std::cout << "\x1B[" << m_entry.length( ) << "X";
+    printf( "\x1B[%dX", m_entry.length( ) );
     SetConsoleCursorPosition( get_console( ), { before_update_cursor[ 0 ], before_update_cursor[ 1 ] } );
 
     m_entry = std::move( entry );
@@ -17,7 +17,7 @@ void log::components::line::update_entry( const std::string& text ) {
     // ESC [ <n> X -> erase n chars @ cursor
     const auto before_update_cursor = get_cursor_pos( );
     SetConsoleCursorPosition( get_console( ), { m_cursor[ 0 ], static_cast< SHORT >( m_cursor[ 1 ] - m_scroll_offset ) } );
-    std::cout << "\x1B[" << m_entry.length( ) << "X";
+    printf( "\x1B[%dX", m_entry.length( ) );
     SetConsoleCursorPosition( get_console( ), { before_update_cursor[ 0 ], before_update_cursor[ 1 ] } );
 
     m_entry.set_text( text );
@@ -32,7 +32,7 @@ log::components::line* log::components::line::color( const ::color& fg, const ::
 
 log::components::line* log::components::line::spew( ) {
     m_entry.spew( );
-    std::cout << '\n';
+    printf( "\n" );
 
     return this;
 }
