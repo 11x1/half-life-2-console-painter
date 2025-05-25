@@ -1,7 +1,11 @@
 # Branches
 [`[master]`](https://github.com/11x1/half-life-2-trainer/tree/master) - contains a simple injector  
 [`[internal-dll]`](https://github.com/11x1/half-life-2-trainer/tree/internal-dll) - internal dll code
-
+  
+# Media
+[demo video](https://new.wxcoy.cc/fail/95341ba3-c4e7-455c-941f-b1460101662b)  
+[getting a video inside the console](https://www.youtube.com/watch?v=jVhQD6DqThE)  
+  
 # How to run
 1. Clone the repository
 2. Build the loader (make sure `lexend-regular.ttf` is in the same directory as the loader executable)
