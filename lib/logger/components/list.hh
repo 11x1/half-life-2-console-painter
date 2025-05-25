@@ -6,7 +6,7 @@
 #include "entry.hh"
 
 
-namespace log::components {
+namespace logger::components {
     class list_t final : public base {
     private:
         std::vector< entry_t > m_entries{ };
@@ -29,8 +29,11 @@ namespace log::components {
 
         void update( ) override;
 
+        list_t* prefix( ) override {
+            return this;
+        }
         list_t* prefix(const std::string& prefix) override;
-        list_t* prefix(const log::components::prefix& prefix) override;
+        list_t* prefix(const logger::components::prefix& prefix) override;
     };
 }
 

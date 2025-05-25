@@ -3,8 +3,7 @@
 #include <cstdio>
 
 #include "../internal/interfaces.hh"
-#include "../sdk/globals.hh"
-#include "../renderer/surface_wrapper.hh" // 🌯
+#include "../renderer/renderer.hh" // 🌯
 
 namespace entity_esp {
     void run( ) {
@@ -44,7 +43,7 @@ namespace entity_esp {
                 auto ws_netname = std::wstring( netname, netname + strlen( netname ) );
 
                 screen_pos.y = 675 - screen_pos.y;
-                surface_wrapper::draw_text( ws_netname, screen_pos, Color( 255, 255, 255, 255 ), fonts::entity_esp );
+                renderer::draw_text( ws_netname, screen_pos, Color( 255, 255, 255, 255 ), fonts::entity_esp );
             }
 
             delete pos;

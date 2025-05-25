@@ -1,7 +1,7 @@
 #ifndef CRENDER_HH
 #define CRENDER_HH
 
-#include "globals.hh"
+#include "math.hh"
 #include "../internal/utils.hh"
 
 /*

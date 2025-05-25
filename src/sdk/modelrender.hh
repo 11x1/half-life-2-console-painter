@@ -1,7 +1,7 @@
 #ifndef MODELRENDER_HH
 #define MODELRENDER_HH
 
-#include "globals.hh"
+#include "math.hh"
 #include "material.hh"
 
 struct model_t

@@ -4,8 +4,7 @@
 #include <algorithm>
 #include <format>
 #include "../internal/globals.hh"
-#include "../renderer/surface_wrapper.hh"
-#include "../sdk/globals.hh"
+#include "../renderer/renderer.hh"
 
 
 template< typename T  > requires std::is_arithmetic_v< T >
@@ -64,10 +63,6 @@ public:
         m_start = m_start + ( m_end - m_start ) * pc;
         m_end = new_end;
 
-        static constexpr auto log_fmt = "{} updated end to {} end={} (start={})\n";
-
-        printf( std::format( log_fmt, __FUNCTION__, new_end, m_end, m_start ).c_str( ) );
-
         m_last_time = globals::m_current_time;
     }
 
@@ -83,7 +78,7 @@ public:
             get_pc( )
         );
 
-        surface_wrapper::draw_text( ws_debug_str, pos, Color( 255, 0, 0, 255 ), fonts::watermark_font );
+        renderer::draw_text( ws_debug_str, pos, Color( 255, 0, 0, 255 ), fonts::watermark_font );
     }
 };
 

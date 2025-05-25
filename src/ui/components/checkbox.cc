@@ -1,27 +1,29 @@
 #include "checkbox.hh"
 
-#include "../gui_context.hh"
 #include "../../input/input.hh"
-#include "../../renderer/surface_wrapper.hh"
+#include "../../renderer/renderer.hh"
+#include "../../renderer/vec2.hh"
 
 using namespace component;
 
-void checkbox::draw( ) {
-    const auto pos = Vector( gui_context::m_cursor );
-    const auto size = Vector( gui_context::m_ctx_width, 20 );
+void checkbox::draw( const int x, const int y ) {
+    const auto pos = Vec2( x, y );
+    const auto size = Vec2( 20, 20 );
 
     handle( pos, size );
 
-    surface_wrapper::draw_rectangle_filled( pos, Vector( 20, 20 ), Color( 0, 0, 0, 255 ) );
-    surface_wrapper::draw_rectangle_filled( Vector( pos.x + 4, pos.y + 4 ), Vector( 12, 12 ), Color( 255, 255, 255, m_alpha_animator.get_value( ) ) );
+    renderer::draw_rectangle_filled( pos, Vector( 20, 20 ), Color( 0, 0, 0, 255 ) );
+    renderer::draw_rectangle_filled( Vector( pos.x + 4, pos.y + 4 ), Vector( 12, 12 ), Color( 255, 255, 255, m_alpha_animator.get_value( ) ) );
 
     static auto ws_name = std::wstring( m_name.begin( ), m_name.end( ) );
-    surface_wrapper::draw_text( ws_name, Vector( pos.x + 25, pos.y ), Color( 255, 255, 255, m_alpha_animator.get_value( ) ), fonts::element_name );
+    renderer::draw_text( ws_name, Vector( pos.x + 25, pos.y ), Color( 255, 255, 255, m_alpha_animator.get_value( ) ), fonts::element_name );
 
-    // m_alpha_animator.draw_debug( Vector( 100, 80 ) );
+    if ( m_texture_id ) {
+        renderer::draw_texture( m_texture_id, Vector( pos.x + 5, pos.y + 5 ), Vector( 10, 10 ) );
+    }
 }
 
-void checkbox::handle( const Vector& pos, const Vector& size ) {
+void checkbox::handle( const Vec2& pos, const Vec2& size ) {
     const bool in_bounds = input_handler::is_mouse_in_bounds( pos, size );
 
     if ( in_bounds != m_hovered ) {
@@ -34,10 +36,9 @@ void checkbox::handle( const Vector& pos, const Vector& size ) {
                 m_alpha_animator.update_end( 0 );
             }
         }
-
     }
 
-    if ( m_hovered && input.is_key_released( VK_LBUTTON ) ) {
+    if ( m_hovered && input.is_key_pressed( VK_LBUTTON ) ) {
         *m_checked = !*m_checked;
         m_alpha_animator.update_end( *m_checked ? 255 : 50 );
     }

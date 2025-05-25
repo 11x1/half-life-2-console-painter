@@ -2,9 +2,11 @@
 
 #include "internal.hh"
 
+#include "game_funcs.hh"
 #include "interfaces.hh"
 #include "log.hh"
 #include "utils.hh"
+#include "../hooked/cengievgui_paint.hh"
 
 #include "../hooked/chlclient_framestagenotify.hh"
 #include "../hooked/vpanel_paint_traverse.hh"
@@ -15,9 +17,8 @@
 
 #include "../module/module.hh"
 
-#include "../renderer/surface_wrapper.hh"
+#include "../renderer/renderer.hh"
 
-#include "../sdk/steamapi/steamutils.hh"
 #include "../sdk/client_entitylist.hh"
 #include "../sdk/materialsystem.hh"
 #include "../sdk/keyvalues/keyvalues.hh"
@@ -42,48 +43,20 @@ void internal::setup::main( const HINSTANCE dll_instance ) {
     GetUserNameA( win_name_buf, &win_name_len );
     LOG( info, "Hello {}, this build is from {}", win_name_buf, __DATE__ );
 
-    std::this_thread::sleep_for( 2s );
+    // std::this_thread::sleep_for( 4s );
 
     while ( !GetModuleHandleA( "engine.dll" ) )
         std::this_thread::sleep_for( 1s );
 
+    // setup everything we need
     internal::setup::modules( );
     interfaces::setup( );
-    surface_wrapper::setup( );
+    renderer::setup( );
     keyvalues_internals::setup( );
+    game_funcs::setup( );
 
-    const auto get_engine_version = utils::scan_pattern( "engine.dll",
-                                                         "A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 55 8B EC 8B 45 ? 33 D2" );
-
-    if ( get_engine_version ) {
-        using get_engine_version_t = int( __stdcall* )( );
-        const auto get_engine_version_func = reinterpret_cast< get_engine_version_t >( get_engine_version );
-
-        LOG( success, "engine version: {}", get_engine_version_func( ) );
-    }
-
-    // const auto string_addr = utils::scan_pattern( "engine.dll", ".?AVIVEngineClient013@@", "xxxxxxxxxxxxxxxxxxxxxxx" );
-    // printf( "%u\n", string_addr );
-
-    utils::get_vftable( "engine.dll", "CEngineClient" );
-
-    using create_or_find_interface = int( __cdecl* )( int, const char* );
-    const auto SteamInternal_FindOrCreateUserInterface = utils::get_proc_address< create_or_find_interface >(
-        "steam_api.dll", "SteamInternal_FindOrCreateUserInterface" );
-
-    if ( SteamInternal_FindOrCreateUserInterface ) {
-        // printf( "fnaddr: %p\n", SteamInternal_FindOrCreateUserInterface );
-
-        const auto lol = reinterpret_cast< steamutils * >(
-            SteamInternal_FindOrCreateUserInterface( 0, "SteamUtils010" ) );
-
-        LOG( success, "batterypc: {}%", static_cast< int >( lol->get_current_battery_power( ) ) );
-    }
-
-
+    // dump all entities
     if ( interfaces::entitylist ) {
-        LOG( debug, "found client entitylist" );
-
         const auto highest_entity_index = interfaces::entitylist->get_highest_entity_index( );
         LOG( debug, "highest entity index: {}", highest_entity_index );
 
@@ -113,8 +86,8 @@ void internal::setup::main( const HINSTANCE dll_instance ) {
         }
 
         LOG( info, "entdump" );
-        for ( const auto pair : seen_ents ) {
-            LOG( info, "         {} {} entitie(s)", pair.second, pair.first );
+        for ( const auto [ name, amount ] : seen_ents ) {
+            LOG( info, "         {} {} {}", amount, name, amount > 1 ? "entities" : "entity" );
         }
 
         if ( chl2_player ) {
@@ -143,15 +116,15 @@ void internal::setup::main( const HINSTANCE dll_instance ) {
         LOG( error, "couldn't find client entitylist" );
     }
 
+    // init hooks
     INITIALIZE_VFTABLE_HOOK( engine.dll, CClientState, chlclient_framestagenotify );
     INITIALIZE_VFTABLE_HOOK( vgui2.dll, VPanelWrapper, vpanel_paint_traverse );
     INITIALIZE_VFTABLE_HOOK( engine.dll, CModelRender, cmodelrender_drawmodelsetup );
     INITIALIZE_VFTABLE_HOOK( vguimatsurface.dll, CMatSystemSurface, cmatsystem_drawtext );
+    INITIALIZE_VFTABLE_HOOK( engine.dll, CEngineVGui, cenginevgui_paint );
 
+    // set material for all entities (aka cham(eleon)s)
     const auto matsystem = utils::bruteforce_interface< materialsystem >( "VMaterialSystem080" );
-
-    // todo: material builder for chams (needs menu framework)
-    //       https://developer.valvesoftware.com/wiki/Category:Shader_parameters
 
     if ( matsystem ) {
         LOG( debug, "creating testmaterial" );
@@ -165,7 +138,8 @@ void internal::setup::main( const HINSTANCE dll_instance ) {
         mats::test_material = matsystem->create_material( "frank_test", &test_mat );
 
         const auto cmodelrender_vftable = utils::get_vftable( "engine.dll", "CModelRender" );
-        modelrender_internals::forced_material_override = *reinterpret_cast< void(__stdcall*)(material*, int) >( reinterpret_cast< void** >( cmodelrender_vftable )[ 1 ] );
+        modelrender_internals::forced_material_override = *reinterpret_cast< void( __stdcall* )( material*, int ) >(
+            reinterpret_cast< void ** >( cmodelrender_vftable )[ 1 ] );
     } else {
         LOG( error, "failed to find VMaterialSystem081" );
     }
@@ -197,8 +171,8 @@ void internal::setup::modules( ) {
     HANDLE hProcess = GetCurrentProcess( );
     DWORD cbNeeded;
 
-    const auto modules_list = g_log.list( 10 )->prefix( "         loaded module " )->spew( );
-    const auto line_waiting_modules = g_log.line( "loading modules" )->prefix( log::components::prefix( "loading", color( 0xffe699 ) ) )->spew( );
+    START_LIST( logger::components::prefix( "loading", color( 0xffe699 ) ), "loading modules", 10,
+                "         loaded module " );
 
     if ( EnumProcessModules( hProcess, hMods, sizeof( hMods ), &cbNeeded ) ) {
         for ( unsigned int i = 0; i < ( cbNeeded / sizeof( HMODULE ) ); i++ ) {
@@ -206,9 +180,9 @@ void internal::setup::modules( ) {
             GetModuleBaseNameA( hProcess, hMods[ i ], szModName, sizeof( szModName ) );
             CREATE_MODULE( std::string( szModName ).c_str( ) );
 
-            modules_list->line( std::string( szModName ) );
+            LOG_LIST( "{}", szModName );
         }
     }
 
-    line_waiting_modules->update_entry( *log::components::entry_t( std::format( "loaded {} modules", cbNeeded / sizeof( HMODULE ) ) ).prefix( log::prefixes::success ) );
+    END_LIST( logger::prefixes::success, "loaded {} modules", cbNeeded / sizeof( HMODULE ) );
 }

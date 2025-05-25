@@ -11,7 +11,7 @@ enum e_entry_flags {
     UNDERLINE = 2,
 };
 
-namespace log::components {
+namespace logger::components {
     class entry_t {
     private:
         std::string m_text;
@@ -37,7 +37,7 @@ namespace log::components {
         size_t length( ) const;
         void spew( ) const;
         entry_t* prefix( const std::string& prefix );
-        entry_t* prefix( const log::components::prefix& prefix );
+        entry_t* prefix( const logger::components::prefix& prefix );
 
         void set_text( const std::string& text );
         void set_fg( const color& fg );

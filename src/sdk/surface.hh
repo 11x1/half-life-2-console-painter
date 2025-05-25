@@ -2,7 +2,8 @@
 #define SURFACE_HH
 #include <string>
 
-#include "globals.hh"
+#include "math.hh"
+#include "common/color.hh"
 #include "../internal/utils.hh"
 
 // fwddecl for vft struct
@@ -33,8 +34,8 @@ enum EFontFlags
   FONTFLAG_DROPSHADOW		= 0x080,
   FONTFLAG_ADDITIVE		= 0x100,
   FONTFLAG_OUTLINE		= 0x200,
-  FONTFLAG_CUSTOM			= 0x400,		// custom generated font - never fall back to asian compatibility mode
-  FONTFLAG_BITMAP			= 0x800,		// compiled bitmap font - no fallbacks
+  FONTFLAG_CUSTOM			= 0x400,
+  FONTFLAG_BITMAP			= 0x800,
 };
 
 struct surface_vtbl
@@ -76,7 +77,7 @@ struct surface_vtbl
   bool (__thiscall *is_within)(surface *, int x, int y);
   bool (__thiscall *has_focus)(surface *);
   bool (__thiscall *supports_feature)(surface *, SurfaceFeature_e);
-  void *restrict_paint_to_single_panel;
+  void *restrict_paint_to_single_panel; // relying on the hl2 src for these ones
   void *set_modal_panel;
   void *get_modal_panel;
   void *unlock_cursor;
@@ -91,14 +92,18 @@ struct surface_vtbl
   int (__thiscall *get_font_tall_requested)(surface *, int);
   int (__thiscall *get_font_ascent)(surface *, int);
   bool (__thiscall *is_font_additive)(surface *, int);
-  void (__stdcall *get_char_abc_wide)(size_t, const wchar_t *, int *, int *, int *);
-  void *pad128;
-  void (__thiscall *get_text_size)(surface*, HFont, const wchar_t *, int *, int *);
+  void (__stdcall *get_char_abc_wide)(size_t, const int, int *, int *, int *);
+  int (__thiscall *get_character_width)(surface *, HFont, int ch);
+  void (__thiscall *get_text_size)(surface *, HFont, const wchar_t *, int *, int *);
   void *pad130[46];
   bool (__thiscall *add_bitmap_font_file)(surface *, const char *);
   void (__thiscall *set_bitmap_font_name)(surface *, const char *, const char *);
   void *pad1F0[17];
   void (__thiscall *destroy_texture_id)(surface *, int);
+  void *pad238[20];
+  void (__stdcall *draw_colored_text)(surface *, HFont, int, int, int r, int g, int b, int a, const char *fmt);
+  void *pad28C[2];
+  int (*draw_text_len)(surface *, HFont, const char *fmt, ...);
 };
 
 
@@ -223,6 +228,14 @@ public:
     static int w, h;
     m_vftbl->get_screen_size( this, &w, &h );
     return Vector( w, h );
+  }
+
+  int get_character_width( const HFont font, const wchar_t ch ) {
+    return m_vftbl->get_character_width( this, font, ch );
+  }
+
+  void get_char_abc_wide( const size_t font, const int ch, int* a, int* b, int* c ) {
+    m_vftbl->get_char_abc_wide( font, ch, a, b, c );
   }
 };
 

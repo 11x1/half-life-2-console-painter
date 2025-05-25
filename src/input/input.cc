@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <ranges>
 
+static POINT mouse_pos_relative { };
+
 void input_handler::update_key( const unsigned int key ) {
     // from https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate
     //  If the most significant bit is set, the key is down,
@@ -63,9 +65,20 @@ bool input_handler::is_key_released( const unsigned int key ) {
 }
 
 bool input_handler::is_mouse_in_bounds( const Vector& pos2d, const Vector& sz2d ) {
-    static POINT mouse_pos { };
-    GetCursorPos( &mouse_pos );
+    GetCursorPos( &mouse_pos_relative );
+    ScreenToClient( GetActiveWindow( ), &mouse_pos_relative );
 
-    return pos2d.x <= mouse_pos.x && mouse_pos.x <= pos2d.x + sz2d.x &&
-           pos2d.y <= mouse_pos.y && mouse_pos.y <= pos2d.y + sz2d.y;
+    return pos2d.x <= mouse_pos_relative.x && mouse_pos_relative.x <= pos2d.x + sz2d.x &&
+           pos2d.y <= mouse_pos_relative.y && mouse_pos_relative.y <= pos2d.y + sz2d.y;
+}
+
+std::array<int, 2> input_handler::get_mouse_pos( ) {
+    GetCursorPos( &mouse_pos_relative );
+
+    // basically (-win_px_off_x, -win_px_off_y)
+    // subtracts from given, give it cursor pos
+    // boom
+    ScreenToClient( GetActiveWindow( ), &mouse_pos_relative );
+
+    return { mouse_pos_relative.x, mouse_pos_relative.y };
 };

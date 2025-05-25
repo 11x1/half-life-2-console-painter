@@ -1,10 +1,13 @@
 #ifndef UTLVECTOR_HH
 #define UTLVECTOR_HH
 
+// from Valve's Source SDK
+// https://github.com/ValveSoftware/source-sdk-2013/blob/39f6dde8fbc238727c020d13b05ecadd31bda4c0/src/public/tier1/utlvector.h#L50
+
 #include <algorithm>
 
 #include "utlmemory.hh"
-#include "../globals.hh"
+#include "../memory/mem_funcs.hh"
 
 #define Assert( ... ) { }
 
@@ -414,7 +417,8 @@ int CUtlVector<T, A>::InsertBefore( int elem, const T& src )
 
 	GrowVector();
 	ShiftElementsRight(elem);
-	CopyConstruct( &Element(elem), src );
+	// idc unsafe
+	CopyConstruct(&m_Memory[ elem ], src);
 	return elem;
 }
 
@@ -529,7 +533,7 @@ inline int CUtlVector<T, A>::InsertMultipleBefore( int elem, int num, const T *p
 	{
 		for ( int i=0; i < num; i++ )
 		{
-			CopyConstruct( &Element( elem+i ), pToInsert[i] );
+			&Element( elem+i ) = *Copy_New( pToInsert[i] );
 		}
 	}
 

@@ -9,7 +9,7 @@
 #include "prefix.hh"
 #include "../helpers.hh"
 
-namespace log::components {
+namespace logger::components {
     class base {
     protected:
         std::array< SHORT, 2 > m_cursor{ 0, 0 };
@@ -32,8 +32,9 @@ namespace log::components {
         virtual base* spew( ) = 0;
 
         // can either append a string or a prefix ptr
+        virtual base* prefix( ) = 0;
         virtual base* prefix( const std::string& prefix ) = 0;
-        virtual base* prefix( const log::components::prefix& prefix ) = 0;
+        virtual base* prefix( const logger::components::prefix& prefix ) = 0;
     };
 }
 

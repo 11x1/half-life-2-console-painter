@@ -28,6 +28,7 @@ uintptr_t module::scan_pattern( const std::string& pattern, size_t offset ) cons
             pattern_bytes.push_back( std::stoi( curbyte, nullptr, 16 ) );
             mask.push_back( false );
         } else {
+            LOG( error, "encountered invalid character(s) \"{}\" in pattern \"{}\"", curbyte, pattern );
             throw std::runtime_error {
                 std::format( "encountered invalid character(s) \"{}\" in pattern \"{}\"", curbyte, pattern )
             };
@@ -75,7 +76,12 @@ uintptr_t module::scan_pattern( const std::vector< byte >& pattern, const std::v
         }
 
         if ( !failed ) {
-            LOG( info, "\"{}\" found @ off=0x{:X}", get_filename( ).c_str( ), i );
+            if ( logger::last_list ) {
+                LOG_LIST( "\"{}\" found @ off=0x{:X}", get_filename( ).c_str( ), i );
+            } else {
+                LOG( info, "\"{}\" found @ off=0x{:X}", get_filename( ).c_str( ), i );
+            }
+
             // our found match addr is at module bytes + i
             return reinterpret_cast< uintptr_t >( module_bytes + i );
         } else debug = false;

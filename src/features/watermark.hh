@@ -1,8 +1,7 @@
 #ifndef WATERMARK_HH
 #define WATERMARK_HH
 
-#include "../renderer/surface_wrapper.hh"
-#include "../ui/components/checkbox.hh"
+#include "../renderer/renderer.hh"
 
 namespace hl2_watermark {
     inline const Vector pad { 5, 3 };

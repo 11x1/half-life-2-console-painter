@@ -11,7 +11,6 @@ MAKE_VFTABLE_HOOK( chlclient_framestagenotify, 0x8c / 4,
 
     switch ( stage ) {
         case FRAME_RENDER_START:
-            input.update_keys( );
             break;
         default:
             break;

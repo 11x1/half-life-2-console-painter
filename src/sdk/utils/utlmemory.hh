@@ -1,9 +1,14 @@
 #ifndef UTLMEMORY_HH
 #define UTLMEMORY_HH
 
+// from Valve's Source SDK
+// https://github.com/ValveSoftware/source-sdk-2013/blob/39f6dde8fbc238727c020d13b05ecadd31bda4c0/src/public/tier1/utlmemory.h
+
 #define Assert( ... )
 #define UTLMEMORY_TRACK_ALLOC( ... )
 #define MEM_ALLOC_CREDIT_CLASS( ... )
+
+#include "../memory/mem_funcs.hh"
 
 template< class T, class I = int >
 class CUtlMemory
@@ -119,7 +124,7 @@ CUtlMemory<T,I>::CUtlMemory( int nGrowSize, int nInitAllocationCount ) : m_pMemo
 	{
 		//UTLMEMORY_TRACK_ALLOC();
 		//MEM_ALLOC_CREDIT_CLASS();
-		m_pMemory = (T*)malloc( m_nAllocationCount * sizeof(T) );
+		m_pMemory = (T*)interfaces::memalloc->alloc( m_nAllocationCount * sizeof(T) );
 	}
 }
 
@@ -158,7 +163,7 @@ void CUtlMemory<T,I>::Init( int nGrowSize /*= 0*/, int nInitSize /*= 0*/ )
 	{
 		UTLMEMORY_TRACK_ALLOC();
 		MEM_ALLOC_CREDIT_CLASS();
-		m_pMemory = (T*)malloc( m_nAllocationCount * sizeof(T) );
+		m_pMemory = (T*)interfaces::memalloc->alloc( m_nAllocationCount * sizeof(T) );
 	}
 }
 
@@ -190,7 +195,7 @@ void CUtlMemory<T,I>::ConvertToGrowableMemory( int nGrowSize )
 		MEM_ALLOC_CREDIT_CLASS();
 
 		int nNumBytes = m_nAllocationCount * sizeof(T);
-		T *pMemory = (T*)malloc( nNumBytes );
+		T *pMemory = (T*)interfaces::memalloc->alloc( nNumBytes );
 		memcpy( (void*)pMemory, (void*)m_pMemory, nNumBytes ); 
 		m_pMemory = pMemory;
 	}
@@ -438,13 +443,13 @@ void CUtlMemory<T,I>::Grow( int num )
 	if (m_pMemory)
 	{
 		MEM_ALLOC_CREDIT_CLASS();
-		m_pMemory = (T*)realloc( m_pMemory, m_nAllocationCount * sizeof(T) );
+		m_pMemory = (T*)interfaces::memalloc->realloc( m_pMemory, m_nAllocationCount * sizeof(T) );
 		Assert( m_pMemory );
 	}
 	else
 	{
 		MEM_ALLOC_CREDIT_CLASS();
-		m_pMemory = (T*)malloc( m_nAllocationCount * sizeof(T) );
+		m_pMemory = (T*)interfaces::memalloc->alloc( m_nAllocationCount * sizeof(T) );
 		Assert( m_pMemory );
 	}
 }
@@ -475,12 +480,12 @@ inline void CUtlMemory<T,I>::EnsureCapacity( int num )
 	if (m_pMemory)
 	{
 		MEM_ALLOC_CREDIT_CLASS();
-		m_pMemory = (T*)realloc( m_pMemory, m_nAllocationCount * sizeof(T) );
+		m_pMemory = (T*)interfaces::memalloc->realloc( m_pMemory, m_nAllocationCount * sizeof(T) );
 	}
 	else
 	{
 		MEM_ALLOC_CREDIT_CLASS();
-		m_pMemory = (T*)malloc( m_nAllocationCount * sizeof(T) );
+		m_pMemory = (T*)interfaces::memalloc->alloc( m_nAllocationCount * sizeof(T) );
 	}
 }
 
@@ -496,7 +501,7 @@ void CUtlMemory<T,I>::Purge()
 		if (m_pMemory)
 		{
 			// UTLMEMORY_TRACK_FREE();
-			free( (void*)m_pMemory );
+			interfaces::memalloc->free( (void*)m_pMemory );
 			m_pMemory = 0;
 		}
 		m_nAllocationCount = 0;
@@ -550,7 +555,7 @@ void CUtlMemory<T,I>::Purge( int numElements )
 
 	// Allocation count > 0, shrink it down.
 	MEM_ALLOC_CREDIT_CLASS();
-	m_pMemory = (T*)realloc( m_pMemory, m_nAllocationCount * sizeof(T) );
+	m_pMemory = (T*)interfaces::memalloc->realloc( m_pMemory, m_nAllocationCount * sizeof(T) );
 }
 
 #endif //UTLMEMORY_HH

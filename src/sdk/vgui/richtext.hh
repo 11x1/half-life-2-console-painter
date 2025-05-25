@@ -39,7 +39,7 @@ struct richtext
     byte pad4[400];
     CUtlVector< wchar_t > m_text_buffer;
     CUtlVector< int > m_line_breaks;
-    CUtlVector< TFormatStream >  *m_format_vector;
+    CUtlVector< TFormatStream >  m_format_vector;
     byte pad1C0[12];
     int _cursorPos;
     bool _mouseSelection;

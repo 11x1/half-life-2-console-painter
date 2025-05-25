@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-std::string log::components::entry_t::get_content( ) const {
+std::string logger::components::entry_t::get_content( ) const {
     std::string content = "\x1B[0m" + m_prefix;
 
     std::string flags;
@@ -26,32 +26,32 @@ std::string log::components::entry_t::get_content( ) const {
     return content;
 }
 
-size_t log::components::entry_t::length( ) const {
+size_t logger::components::entry_t::length( ) const {
     return m_text.length( ) + m_prefix.length( );
 }
 
-void log::components::entry_t::spew( ) const {
+void logger::components::entry_t::spew( ) const {
     printf( get_content( ).c_str( ) );
 }
 
-log::components::entry_t* log::components::entry_t::prefix( const std::string& prefix ) {
+logger::components::entry_t* logger::components::entry_t::prefix( const std::string& prefix ) {
     m_prefix = m_prefix + prefix;
     return this;
 }
 
-log::components::entry_t* log::components::entry_t::prefix( const log::components::prefix& prefix ) {
+logger::components::entry_t* logger::components::entry_t::prefix( const logger::components::prefix& prefix ) {
     m_prefix += prefix.get( );
     return this;
 }
 
-void log::components::entry_t::set_text( const std::string& text ) {
+void logger::components::entry_t::set_text( const std::string& text ) {
     m_text = text;
 }
 
-void log::components::entry_t::set_fg( const color& fg ) {
+void logger::components::entry_t::set_fg( const color& fg ) {
     m_fg = fg;
 }
 
-void log::components::entry_t::set_bg( const color& bg ) {
+void logger::components::entry_t::set_bg( const color& bg ) {
     m_bg = bg;
 }

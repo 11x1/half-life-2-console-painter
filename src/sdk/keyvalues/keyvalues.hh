@@ -50,6 +50,10 @@ public:
         keyvalues_internals::functions::initialize( this, name.c_str( ) );
     }
 
+    // in theory these could mess up the
+    // vft structure BUT keyvalues don't
+    // have any virtual methods so doesn't
+    // matter
     void set_int( const char* name, int value );
     void set_string( const char* name, const char* value );
 };

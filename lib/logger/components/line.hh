@@ -4,12 +4,12 @@
 #include "entry.hh"
 #include "prefix.hh"
 
-namespace log::components {
+namespace logger::components {
     class line final : public base {
     protected:
         entry_t m_entry;
 
-        log::components::prefix* m_prefix { nullptr };
+        logger::components::prefix* m_prefix { nullptr };
     public:
         explicit line( entry_t entry ) : m_entry( std::move( entry ) ) {
         }
@@ -28,8 +28,11 @@ namespace log::components {
         // overloads
         line* spew( ) override;
         void update( ) override;
+        line* prefix( ) override {
+            return this;
+        }
         line* prefix(const std::string& prefix) override;
-        line* prefix(const log::components::prefix& prefix) override;
+        line* prefix(const logger::components::prefix& prefix) override;
     };
 }
 

@@ -1,5 +1,5 @@
-#ifndef COLOR_HH
-#define COLOR_HH
+#ifndef LOGGER_COLOR_HH
+#define LOGGER_COLOR_HH
 
 #include "Windows.h"
 
@@ -48,4 +48,4 @@ public:
 
 inline const auto COLOR_NONE { color( ) };
 
-#endif //COLOR_HH
+#endif //LOGGER_COLOR_HH

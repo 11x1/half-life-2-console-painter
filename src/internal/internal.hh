@@ -3,13 +3,9 @@
 
 #include <Windows.h>
 
-inline namespace internal {
-
-    namespace setup {
-        void main( HINSTANCE dll_instance );
-
-        void modules( );
-    }
+namespace internal::setup {
+    void main( HINSTANCE dll_instance );
+    void modules( );
 };
 
 

@@ -1,10 +1,11 @@
 #ifndef CMATSYSTEM_DRAWTEXT_HH
 #define CMATSYSTEM_DRAWTEXT_HH
 
+#include <cmath>
 #include <string>
 
 MAKE_VFTABLE_HOOK( cmatsystem_drawtext, 0x288 / 4,
-                   void, __cdecl, void* thisptr, int font, int x, int y, int r, int g, int b, int a, const char* fmt,
+                   void, __cdecl, surface* thisptr, int font, int x, int y, int r, int g, int b, int a, const char* fmt,
                    ...
 ) {
     char buffer[ 4096 ];
@@ -13,20 +14,17 @@ MAKE_VFTABLE_HOOK( cmatsystem_drawtext, 0x288 / 4,
     vsnprintf( buffer, sizeof( buffer ), fmt, args );
     va_end( args );
 
-    auto sigma_sigma_boy = ( surface * ) thisptr;
-
-    std::string text{ buffer };
     // no I have not heard about strcmp
     if ( *fmt == 'f' && *( fmt + 1 ) == 'p' && *( fmt + 2 ) == 's' ) {
-        sigma_sigma_boy->set_render_font( font );
-        sigma_sigma_boy->set_text_color( 225, 102, 102, 255 );
-        sigma_sigma_boy->set_text_pos( Vector( x, y ) );
-        sigma_sigma_boy->draw_text( L"[hl2 internal]" );
+        thisptr->set_render_font( font );
+        thisptr->set_text_color( 139, 126, 214, std::abs( std::sin( globals::m_current_time / 1000.f ) ) * 254 );
+        thisptr->set_text_pos( Vector( x, y ) );
+        thisptr->draw_text( L"paint!!!!! " );
 
-        x += sigma_sigma_boy->get_text_size( font, L"[hl2 internal] " ).x;
+        x += thisptr->get_text_size( font, L"paint!!!!! " ).x;
     }
 
-    original( thisptr, font, x, y, r, g, b, a, text.c_str( ) );
+    original( thisptr, font, x, y, r, g, b, a, buffer );
 }
 
 #endif //CMATSYSTEM_DRAWTEXT_HH

@@ -4,7 +4,7 @@
 #include "Windows.h"
 #include <map>
 
-#include "../sdk/globals.hh"
+#include "../sdk/math.hh"
 
 struct key_state_t {
     bool is_held;
@@ -32,6 +32,7 @@ public:
     bool is_key_released( const unsigned int key );
 
     static bool is_mouse_in_bounds( const Vector& pos2d, const Vector& sz2d );
+    static std::array< int, 2 > get_mouse_pos( );
 };
 
 inline input_handler input{ };

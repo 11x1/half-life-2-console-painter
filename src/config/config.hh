@@ -2,7 +2,8 @@
 #define CONFIG_HH
 
 namespace config {
-    bool test_feature { false };
+    inline bool m_use_brush { false };
+    inline int m_brush_size { 1 };
 }
 
 #endif //CONFIG_HH

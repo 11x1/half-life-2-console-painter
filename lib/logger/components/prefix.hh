@@ -3,7 +3,7 @@
 
 #include "../color.hh"
 
-namespace log::components {
+namespace logger::components {
     class prefix {
     private:
         std::string m_prefix;

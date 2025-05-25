@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-void log::components::list_t::line( entry_t entry ) {
+void logger::components::list_t::line( entry_t entry ) {
     size_t longest_entry = 0;
 
     for ( const auto& e : m_entries ) {
@@ -33,17 +33,17 @@ void log::components::list_t::line( entry_t entry ) {
     // update( );
 }
 
-void log::components::list_t::line( const std::string& str ) {
+void logger::components::list_t::line( const std::string& str ) {
     line(
-        log::components::entry_t( str, m_default_color, COLOR_NONE, 0 )
+        logger::components::entry_t( str, m_default_color, COLOR_NONE, 0 )
     );
 }
 
-void log::components::list_t::color( const ::color col ) {
+void logger::components::list_t::color( const ::color col ) {
     m_default_color = col;
 }
 
-log::components::list_t* log::components::list_t::spew( ) {
+logger::components::list_t* logger::components::list_t::spew( ) {
     // spew out all entries
     // if no entry, add a palceholder (aka empty line)
     for ( size_t i = 0; i < m_max_rows; i++ ) {
@@ -59,7 +59,7 @@ log::components::list_t* log::components::list_t::spew( ) {
     return this;
 }
 
-void log::components::list_t::update( ) {
+void logger::components::list_t::update( ) {
     // cache cursor position
     const auto before_update_cursor = get_cursor_pos( );
 
@@ -72,7 +72,7 @@ void log::components::list_t::update( ) {
     SetConsoleCursorPosition( get_console( ), { before_update_cursor[ 0 ], before_update_cursor[ 1 ] } );
 }
 
-log::components::list_t* log::components::list_t::prefix( const std::string& prefix ) {
+logger::components::list_t* logger::components::list_t::prefix( const std::string& prefix ) {
     m_prefix += prefix;
     for ( auto& e : m_entries ) {
         e.prefix( prefix );
@@ -80,6 +80,6 @@ log::components::list_t* log::components::list_t::prefix( const std::string& pre
     return this;
 }
 
-log::components::list_t* log::components::list_t::prefix( const log::components::prefix& prefix ) {
+logger::components::list_t* logger::components::list_t::prefix( const logger::components::prefix& prefix ) {
     return this->prefix( prefix.get( ) );
 }
