@@ -104,6 +104,11 @@ namespace logger {
             SetConsoleCursorPosition( get_console( ), { 0, 0 } );
         }
 
+
+        void cleanup( ) {
+            m_components.clear( );
+        }
+
         // maybe redo to
         //
         // logger->line( ... )->prefix( ... )->spew( ); ?
@@ -114,29 +119,13 @@ namespace logger {
 
         components::line* line( const std::string& text ) {
             m_components.emplace_back( std::make_unique< components::line >( text ) );
-            return static_cast< components::line* >(  m_components.back( ).get( ) );
+            return dynamic_cast< components::line* >(  m_components.back( ).get( ) );
         }
 
         components::list_t* list( const size_t lines ) {
             m_components.emplace_back( std::make_unique< components::list_t >( lines ) );
-            return static_cast< components::list_t* >( m_components.back( ).get( ) );
+            return dynamic_cast< components::list_t* >( m_components.back( ).get( ) );
         }
-
-        /*template< typename Component, typename... Args >
-        Component* add( Args&&... args ) {
-            // we add an element
-            m_components.emplace_back( std::make_unique< Component >( std::forward< Args >( args )... ) );
-
-            const auto last = m_components.back( ).get( );
-
-            // log last to update cursor pos
-            last->spew( );
-
-            // move cursor down
-            std::cout << "\n";
-
-            return static_cast< Component* >( last );
-        }*/
     };
 }
 inline logger::logger g_log;

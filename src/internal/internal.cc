@@ -157,6 +157,10 @@ void internal::setup::main( const HINSTANCE dll_instance ) {
 
     hooks::unhook_all( );
 
+    g_log.cleanup( );
+
+    std::this_thread::sleep_for( 2s );
+
     fclose( stdout );
     FreeConsole( );
     FreeLibraryAndExitThread( dll_instance, EXIT_SUCCESS );
