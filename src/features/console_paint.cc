@@ -60,11 +60,11 @@ void console_paint::setup_dialog(void* a3, cconsolepanel* console_panel ) {
         const int x = i % max_chars_x;
         const int y = i / max_chars_y;
 
-        const bool in_booya = x >= 20 && x <= max_chars_x - 20
+        const bool in_rect = x >= 20 && x <= max_chars_x - 20
                               && y >= 20 && y <= max_chars_y - 20;
 
         TFormatStream fs;
-        fs.color = in_booya ? Color( 0xFF0000FF ) : Color( 0xFFFFFFFF );
+        fs.color = in_rect ? Color( 0xFF0000FF ) : Color( 0xFFFFFFFF );
         // fs.fade = TFade{ 0, 0, 0, 0xFF };
         fs.pixelsIndent = 0;
         fs.textClickable = false;
