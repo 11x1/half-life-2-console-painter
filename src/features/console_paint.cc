@@ -65,7 +65,7 @@ void console_paint::setup_dialog(void* a3, cconsolepanel* console_panel ) {
 
         TFormatStream fs;
         fs.color = in_rect ? Color( 0xFF0000FF ) : Color( 0xFFFFFFFF );
-        // fs.fade = TFade{ 0, 0, 0, 0xFF };
+        fs.fade = TFade{ 0, -1, 0, 0xFF };
         fs.pixelsIndent = 0;
         fs.textClickable = false;
         fs.textStreamIndex = i;
@@ -76,6 +76,7 @@ void console_paint::setup_dialog(void* a3, cconsolepanel* console_panel ) {
 
     TFormatStream white;
     white.color = Color( 0xFFFFFFFF );
+    white.fade = TFade{ 0, -1, 0, 0xFF };
     white.pixelsIndent = 0;
     white.textClickable = false;
     white.textStreamIndex = max_chars_total + 1;

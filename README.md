@@ -14,6 +14,7 @@
 5. Run the target process (Half-Life 2), wait for the game to load into the main menu
 6. Inject the DLL by clicking the "Inject" button in the loader window.
 7. Once the DLL is injected, you can open the in-game console and start painting!   
+note: you need to resize the console to make sure it updates properly against the newline buffer   
 note: caps-lock to paint, controls above the console to control the thickness and color (red/black)
 
 # About the project
