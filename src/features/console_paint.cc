@@ -19,7 +19,7 @@ void console_paint::setup_dialog(void* a3, cconsolepanel* console_panel ) {
 
     // set up buffer
     // clear all formatting done by the game
-    for ( int i = 0; i < hist->m_text_buffer.Count( ); i++ ) {
+    for ( int i = hist->m_text_buffer.Count( ) - 1; i >= 0; i-- ) {
         if ( hist->m_text_buffer[ i ] == L'\n' || hist->m_text_buffer[ i ] == L'\r' )
             console_panel->m_pHistory->m_text_buffer.Remove( i );
     }
@@ -101,7 +101,6 @@ void console_paint::run( void* a1, void* edx, void* a3 ) {
 
     auto* hist = console_panel->m_pHistory;
 
-    static std::vector< Color > format_vector( max_chars_total );
     static bool init_format{ false };
 
     // initialize console as almost black
@@ -142,7 +141,7 @@ void console_paint::run( void* a1, void* edx, void* a3 ) {
         // and y axis
         const auto idx = ( int ) ( m_rel.y * ( max_chars_x + 1 ) + m_rel.x );
 
-        if ( m_rel.x <= max_chars_x && m_rel.y <= max_chars_y && idx <= max_chars_total ) {
+        if ( m_rel.x <= max_chars_x && m_rel.y <= max_chars_y && idx < max_chars_total ) {
             const Color col = config::m_use_brush ? Color( 0xFF0000FF ) : Color( 0x101010FF );
             const int brush_size = config::m_brush_size / 2;
 

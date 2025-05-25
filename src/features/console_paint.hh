@@ -2,7 +2,9 @@
 #define CONSOLE_PAINT_HH
 
 #include <array>
+#include <vector>
 
+#include "../sdk/common/color.hh"
 #include "../sdk/vgui/cconsolepanel.hh"
 
 namespace console_paint {
@@ -18,6 +20,8 @@ namespace console_paint {
 
     // total is ( x + 1 ) * y, need to include newline
     inline constexpr int max_chars_total = ( max_chars_x + 1 ) * max_chars_y;
+
+    inline std::vector< Color > format_vector( max_chars_total );
 
     void update_console_parent_pos( void* gameconsoledialog );
     void setup_dialog( void* a3, cconsolepanel* );
