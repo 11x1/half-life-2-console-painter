@@ -119,7 +119,13 @@ void internal::setup::main( const HINSTANCE dll_instance ) {
     // init hooks
     INITIALIZE_VFTABLE_HOOK( engine.dll, CClientState, chlclient_framestagenotify );
     INITIALIZE_VFTABLE_HOOK( vgui2.dll, VPanelWrapper, vpanel_paint_traverse );
+
+    // material override only enabled on vs builds
+    // because mingw (somehow) breaks
+#ifdef _MSC_BUILD
     INITIALIZE_VFTABLE_HOOK( engine.dll, CModelRender, cmodelrender_drawmodelsetup );
+#endif
+
     INITIALIZE_VFTABLE_HOOK( vguimatsurface.dll, CMatSystemSurface, cmatsystem_drawtext );
     INITIALIZE_VFTABLE_HOOK( engine.dll, CEngineVGui, cenginevgui_paint );
 
@@ -150,8 +156,6 @@ void internal::setup::main( const HINSTANCE dll_instance ) {
         std::this_thread::sleep_for( 500ms );
 
     hooks::unhook_all( );
-
-    LOG( info, "bye" );
 
     fclose( stdout );
     FreeConsole( );

@@ -11,8 +11,6 @@ void component::slider::handle( const Vec2& pos, const Vec2& sz ) {
 
     const auto delta = m_max - m_min;
 
-    LOG( info, "delta: {}", delta );
-
     const int value_at_pc = ( off_x * delta ) / m_width;
 
     *m_ref_value = m_min + value_at_pc;

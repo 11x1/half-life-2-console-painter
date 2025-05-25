@@ -8,7 +8,7 @@ if(MSVC)
     add_link_options(/debug:full)
 else() # mingw (i prefer msvc (debugging is easier with vs))
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++ -static")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static -Wl,--subsystem,windows,--kill-at,--enable-stdcall-fixup")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static")
 endif()
 
 file(GLOB_RECURSE SRC src/*.cc src/*.hh lib/*.cc lib/*.hh)

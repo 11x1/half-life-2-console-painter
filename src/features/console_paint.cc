@@ -101,8 +101,6 @@ void console_paint::run( void* a1, void* edx, void* a3 ) {
 
     auto* hist = console_panel->m_pHistory;
 
-    static bool init_format{ false };
-
     // initialize console as almost black
     if ( !init_format ) {
         init_format = true;
